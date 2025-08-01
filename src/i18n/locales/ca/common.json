@@ -81,6 +81,7 @@
 		"command_already_exists": "L'ordre \"{{commandName}}\" ja existeix",
 		"create_command_failed": "Error en crear l'ordre",
 		"command_template_content": "---\ndescription: \"Breu descripció del que fa aquesta ordre\"\n---\n\nAquesta és una nova ordre slash. Edita aquest fitxer per personalitzar el comportament de l'ordre.",
+		"mode_import_failed": "Ha fallat la importació del mode: {{error}}",
 		"claudeCode": {
 			"processExited": "El procés Claude Code ha sortit amb codi {{exitCode}}.",
 			"errorOutput": "Sortida d'error: {{output}}",
@@ -101,9 +102,19 @@
 			"serverError": "Error del servidor de l'API de Cerebras ({{status}}). Torneu-ho a provar més tard.",
 			"genericError": "Error de l'API de Cerebras ({{status}}): {{message}}",
 			"noResponseBody": "Error de l'API de Cerebras: No hi ha cos de resposta",
-			"completionError": "Error de finalització de Cerebras: {{error}}"
+			"completionError": "Error de finalització de Cerebras: {{error}}",
+			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla."
 		},
-		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
+		"geminiCli": {
+			"oauthLoadFailed": "No s'han pogut carregar les credencials OAuth. Si us plau, autentica't primer: {{error}}",
+			"tokenRefreshFailed": "No s'ha pogut actualitzar el token OAuth: {{error}}",
+			"onboardingTimeout": "L'operació d'onboarding ha esgotat el temps després de 60 segons. Si us plau, torna-ho a provar més tard.",
+			"projectDiscoveryFailed": "No s'ha pogut descobrir l'ID del projecte. Assegura't d'estar autenticat amb 'gemini auth'.",
+			"rateLimitExceeded": "S'ha superat el límit de velocitat. S'han assolit els límits del nivell gratuït.",
+			"badRequest": "Sol·licitud incorrecta: {{details}}",
+			"apiError": "Error de l'API Gemini CLI: {{error}}",
+			"completionError": "Error de compleció de Gemini CLI: {{error}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "No s'ha seleccionat contingut de terminal",
