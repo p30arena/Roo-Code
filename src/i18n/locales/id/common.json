@@ -111,6 +111,9 @@
 			"badRequest": "Permintaan tidak valid: {{details}}",
 			"apiError": "Kesalahan API Gemini CLI: {{error}}",
 			"completionError": "Kesalahan penyelesaian Gemini CLI: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Penyedia Roo memerlukan autentikasi cloud. Silakan masuk ke Roo Code Cloud."
 		}
 	},
 	"warnings": {

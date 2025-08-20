@@ -111,6 +111,9 @@
 			"badRequest": "잘못된 요청: {{details}}",
 			"apiError": "Gemini CLI API 오류: {{error}}",
 			"completionError": "Gemini CLI 완성 오류: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo 제공업체는 클라우드 인증이 필요합니다. Roo Code Cloud에 로그인하세요."
 		}
 	},
 	"warnings": {

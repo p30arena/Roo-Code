@@ -111,6 +111,9 @@
 			"badRequest": "Nieprawidłowe żądanie: {{details}}",
 			"apiError": "Błąd API Gemini CLI: {{error}}",
 			"completionError": "Błąd uzupełniania Gemini CLI: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Dostawca Roo wymaga uwierzytelnienia w chmurze. Zaloguj się do Roo Code Cloud."
 		}
 	},
 	"warnings": {

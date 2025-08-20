@@ -111,6 +111,9 @@
 			"badRequest": "Неверный запрос: {{details}}",
 			"apiError": "Ошибка API Gemini CLI: {{error}}",
 			"completionError": "Ошибка завершения Gemini CLI: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Провайдер Roo требует облачной аутентификации. Войдите в Roo Code Cloud."
 		}
 	},
 	"warnings": {

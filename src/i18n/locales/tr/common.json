@@ -111,6 +111,9 @@
 			"badRequest": "Geçersiz istek: {{details}}",
 			"apiError": "Gemini CLI API hatası: {{error}}",
 			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo sağlayıcısı bulut kimlik doğrulaması gerektirir. Lütfen Roo Code Cloud'a giriş yapın."
 		}
 	},
 	"warnings": {

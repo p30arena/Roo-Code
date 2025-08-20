@@ -111,6 +111,9 @@
 			"badRequest": "不正なリクエスト: {{details}}",
 			"apiError": "Gemini CLI APIエラー: {{error}}",
 			"completionError": "Gemini CLI補完エラー: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Rooプロバイダーはクラウド認証が必要です。Roo Code Cloudにサインインしてください。"
 		}
 	},
 	"warnings": {

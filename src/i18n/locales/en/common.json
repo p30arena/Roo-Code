@@ -111,6 +111,9 @@
 			"badRequest": "Bad request: {{details}}",
 			"apiError": "Gemini CLI API error: {{error}}",
 			"completionError": "Gemini CLI completion error: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo provider requires cloud authentication. Please sign in to Roo Code Cloud."
 		}
 	},
 	"warnings": {
