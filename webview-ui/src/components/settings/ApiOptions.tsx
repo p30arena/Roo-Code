@@ -32,6 +32,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiDefaultModelId,
 	fireworksDefaultModelId,
+	featherlessDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	rooDefaultModelId,
 } from "@roo-code/types"
@@ -89,6 +90,7 @@ import {
 	XAI,
 	ZAi,
 	Fireworks,
+	Featherless,
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -330,6 +332,7 @@ const ApiOptions = ({
 							: internationalZAiDefaultModelId,
 				},
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
+				featherless: { field: "apiModelId", default: featherlessDefaultModelId },
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				openai: { field: "openAiModelId" },
@@ -605,6 +608,10 @@ const ApiOptions = ({
 						</div>
 					)}
 				</div>
+			)}
+
+			{selectedProvider === "featherless" && (
+				<Featherless apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProviderModels.length > 0 && (

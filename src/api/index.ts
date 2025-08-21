@@ -37,6 +37,7 @@ import {
 	ZAiHandler,
 	FireworksHandler,
 	RooHandler,
+	FeatherlessHandler,
 } from "./providers"
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -146,6 +147,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new IOIntelligenceHandler(options)
 		case "roo":
 			return new RooHandler(options)
+		case "featherless":
+			return new FeatherlessHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)
