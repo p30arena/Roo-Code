@@ -10,6 +10,7 @@ import pWaitFor from "p-wait-for"
 import { serializeError } from "serialize-error"
 
 import {
+	type RooCodeSettings,
 	type TaskLike,
 	type TaskMetadata,
 	type TaskEvents,
@@ -23,6 +24,7 @@ import {
 	type ClineAsk,
 	type ToolProgressStatus,
 	type HistoryItem,
+	type CreateTaskOptions,
 	RooCodeEventName,
 	TelemetryEventName,
 	TaskStatus,
@@ -35,7 +37,7 @@ import {
 	isResumableAsk,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
-import { CloudService, ExtensionBridgeService } from "@roo-code/cloud"
+import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
 
 // api
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
@@ -110,12 +112,12 @@ const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
 const FORCED_CONTEXT_REDUCTION_PERCENT = 75 // Keep 75% of context (remove 25%) on context window errors
 const MAX_CONTEXT_WINDOW_RETRIES = 3 // Maximum retries for context window errors
 
-export type TaskOptions = {
+export interface TaskOptions extends CreateTaskOptions {
 	provider: ClineProvider
 	apiConfiguration: ProviderSettings
 	enableDiff?: boolean
 	enableCheckpoints?: boolean
-	enableTaskBridge?: boolean
+	enableBridge?: boolean
 	fuzzyMatchThreshold?: number
 	consecutiveMistakeLimit?: number
 	task?: string
@@ -255,8 +257,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	checkpointServiceInitializing = false
 
 	// Task Bridge
-	enableTaskBridge: boolean
-	bridgeService: ExtensionBridgeService | null = null
+	enableBridge: boolean
 
 	// Streaming
 	isWaitingForFirstChunk = false
@@ -280,7 +281,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		apiConfiguration,
 		enableDiff = false,
 		enableCheckpoints = true,
-		enableTaskBridge = false,
+		enableBridge = false,
 		fuzzyMatchThreshold = 1.0,
 		consecutiveMistakeLimit = DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 		task,
@@ -335,7 +336,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
 		this.diffViewProvider = new DiffViewProvider(this.cwd, this)
 		this.enableCheckpoints = enableCheckpoints
-		this.enableTaskBridge = enableTaskBridge
+		this.enableBridge = enableBridge
 
 		this.rootTask = rootTask
 		this.parentTask = parentTask
@@ -846,7 +847,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.handleWebviewAskResponse("noButtonClicked", text, images)
 	}
 
-	public submitUserMessage(text: string, images?: string[]): void {
+	public async submitUserMessage(
+		text: string,
+		images?: string[],
+		mode?: string,
+		providerProfile?: string,
+	): Promise<void> {
 		try {
 			text = (text ?? "").trim()
 			images = images ?? []
@@ -858,6 +864,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const provider = this.providerRef.deref()
 
 			if (provider) {
+				if (mode) {
+					await provider.setMode(mode)
+				}
+
+				if (providerProfile) {
+					await provider.setProviderProfile(providerProfile)
+				}
+
 				provider.postMessageToWebview({ type: "invoke", invoke: "sendMessage", text, images })
 			} else {
 				console.error("[Task#submitUserMessage] Provider reference lost")
@@ -1082,16 +1096,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// Start / Abort / Resume
 
 	private async startTask(task?: string, images?: string[]): Promise<void> {
-		if (this.enableTaskBridge) {
+		if (this.enableBridge) {
 			try {
-				this.bridgeService = this.bridgeService || ExtensionBridgeService.getInstance()
-
-				if (this.bridgeService) {
-					await this.bridgeService.subscribeToTask(this)
-				}
+				await BridgeOrchestrator.subscribeToTask(this)
 			} catch (error) {
 				console.error(
-					`[Task#startTask] subscribeToTask failed - ${error instanceof Error ? error.message : String(error)}`,
+					`[Task#startTask] BridgeOrchestrator.subscribeToTask() failed: ${error instanceof Error ? error.message : String(error)}`,
 				)
 			}
 		}
@@ -1154,18 +1164,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	private async resumeTaskFromHistory() {
-		// Resuming task from history
-
-		if (this.enableTaskBridge) {
+		if (this.enableBridge) {
 			try {
-				this.bridgeService = this.bridgeService || ExtensionBridgeService.getInstance()
-
-				if (this.bridgeService) {
-					await this.bridgeService.subscribeToTask(this)
-				}
+				await BridgeOrchestrator.subscribeToTask(this)
 			} catch (error) {
 				console.error(
-					`[Task#resumeTaskFromHistory] subscribeToTask failed - ${error instanceof Error ? error.message : String(error)}`,
+					`[Task#resumeTaskFromHistory] BridgeOrchestrator.subscribeToTask() failed: ${error instanceof Error ? error.message : String(error)}`,
 				)
 			}
 		}
@@ -1419,10 +1423,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public dispose(): void {
-		// Disposing task
-		console.log(`[Task] disposing task ${this.taskId}.${this.instanceId}`)
+		console.log(`[Task#dispose] disposing task ${this.taskId}.${this.instanceId}`)
 
-		// Remove all event listeners to prevent memory leaks
+		// Remove all event listeners to prevent memory leaks.
 		try {
 			this.removeAllListeners()
 		} catch (error) {
@@ -1435,12 +1438,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.pauseInterval = undefined
 		}
 
-		// Unsubscribe from TaskBridge service.
-		if (this.bridgeService) {
-			this.bridgeService
-				.unsubscribeFromTask(this.taskId)
-				.catch((error: unknown) => console.error("Error unsubscribing from task bridge:", error))
-			this.bridgeService = null
+		if (this.enableBridge) {
+			BridgeOrchestrator.getInstance()
+				?.unsubscribeFromTask(this.taskId)
+				.catch((error) =>
+					console.error(
+						`[Task#dispose] BridgeOrchestrator#unsubscribeFromTask() failed: ${error instanceof Error ? error.message : String(error)}`,
+					),
+				)
 		}
 
 		// Release any terminals associated with this task.
