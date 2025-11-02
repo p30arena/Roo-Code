@@ -297,6 +297,9 @@
 		"getZaiApiKey": "Ottieni chiave API Z AI",
 		"zaiEntrypoint": "Punto di ingresso Z AI",
 		"zaiEntrypointDescription": "Si prega di selezionare il punto di ingresso API appropriato in base alla propria posizione. Se ti trovi in Cina, scegli open.bigmodel.cn. Altrimenti, scegli api.z.ai.",
+		"minimaxApiKey": "Chiave API MiniMax",
+		"getMiniMaxApiKey": "Ottieni chiave API MiniMax",
+		"minimaxBaseUrl": "Punto di ingresso MiniMax",
 		"geminiApiKey": "Chiave API Gemini",
 		"getGroqApiKey": "Ottieni chiave API Groq",
 		"groqApiKey": "Chiave API Groq",
@@ -728,10 +731,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Usa strategia diff unificata sperimentale",
 			"description": "Abilita la strategia diff unificata sperimentale. Questa strategia potrebbe ridurre il numero di tentativi causati da errori del modello, ma può causare comportamenti imprevisti o modifiche errate. Abilitala solo se comprendi i rischi e sei disposto a rivedere attentamente tutte le modifiche."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Usa strumento di ricerca e sostituzione sperimentale",
-			"description": "Abilita lo strumento di ricerca e sostituzione sperimentale, consentendo a Roo di sostituire più istanze di un termine di ricerca in una singola richiesta."
 		},
 		"INSERT_BLOCK": {
 			"name": "Usa strumento di inserimento contenuti sperimentale",

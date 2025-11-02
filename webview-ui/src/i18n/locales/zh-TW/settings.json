@@ -297,6 +297,9 @@
 		"getZaiApiKey": "取得 Z AI API 金鑰",
 		"zaiEntrypoint": "Z AI 服務端點",
 		"zaiEntrypointDescription": "請根據您的位置選擇適當的 API 服務端點。如果您在中國，請選擇 open.bigmodel.cn。否則，請選擇 api.z.ai。",
+		"minimaxApiKey": "MiniMax API 金鑰",
+		"getMiniMaxApiKey": "取得 MiniMax API 金鑰",
+		"minimaxBaseUrl": "MiniMax 服務端點",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
@@ -728,10 +731,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "使用實驗性統一差異比對策略",
 			"description": "啟用實驗性的統一差異比對策略。此策略可能減少因模型錯誤而導致的重試次數，但也可能導致意外行為或錯誤的編輯。請務必了解風險，並願意仔細檢查所有變更後再啟用。"
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "使用實驗性搜尋與取代工具",
-			"description": "啟用實驗性的搜尋與取代工具，允許 Roo 在單一請求中取代多個符合的內容。"
 		},
 		"INSERT_BLOCK": {
 			"name": "使用實驗性插入內容工具",

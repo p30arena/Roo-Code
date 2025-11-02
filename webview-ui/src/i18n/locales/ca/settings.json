@@ -297,6 +297,9 @@
 		"getZaiApiKey": "Obtenir clau API de Z AI",
 		"zaiEntrypoint": "Punt d'entrada de Z AI",
 		"zaiEntrypointDescription": "Si us plau, seleccioneu el punt d'entrada de l'API apropiat segons la vostra ubicació. Si sou a la Xina, trieu open.bigmodel.cn. Altrament, trieu api.z.ai.",
+		"minimaxApiKey": "Clau API de MiniMax",
+		"getMiniMaxApiKey": "Obtenir clau API de MiniMax",
+		"minimaxBaseUrl": "Punt d'entrada de MiniMax",
 		"geminiApiKey": "Clau API de Gemini",
 		"getGroqApiKey": "Obtenir clau API de Groq",
 		"groqApiKey": "Clau API de Groq",
@@ -727,10 +730,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Utilitzar estratègia diff unificada experimental",
 			"description": "Activar l'estratègia diff unificada experimental. Aquesta estratègia podria reduir el nombre de reintents causats per errors del model, però pot causar comportaments inesperats o edicions incorrectes. Activeu-la només si enteneu els riscos i esteu disposats a revisar acuradament tots els canvis."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Utilitzar eina de cerca i reemplaçament experimental",
-			"description": "Activar l'eina de cerca i reemplaçament experimental, permetent a Roo reemplaçar múltiples instàncies d'un terme de cerca en una sola petició."
 		},
 		"INSERT_BLOCK": {
 			"name": "Utilitzar eina d'inserció de contingut experimental",

@@ -297,6 +297,9 @@
 		"getZaiApiKey": "Z AI API-sleutel ophalen",
 		"zaiEntrypoint": "Z AI-ingangspunt",
 		"zaiEntrypointDescription": "Selecteer het juiste API-ingangspunt op basis van uw locatie. Als u zich in China bevindt, kies dan open.bigmodel.cn. Anders kiest u api.z.ai.",
+		"minimaxApiKey": "MiniMax API-sleutel",
+		"getMiniMaxApiKey": "MiniMax API-sleutel ophalen",
+		"minimaxBaseUrl": "MiniMax-ingangspunt",
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
@@ -728,10 +731,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Experimentele unified diff-strategie gebruiken",
 			"description": "Schakel de experimentele unified diff-strategie in. Deze strategie kan het aantal herhalingen door model fouten verminderen, maar kan onverwacht gedrag of onjuiste bewerkingen veroorzaken. Alleen inschakelen als je de risico's begrijpt en wijzigingen zorgvuldig wilt controleren."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Experimentele zoek-en-vervang-tool gebruiken",
-			"description": "Schakel de experimentele zoek-en-vervang-tool in, waarmee Roo meerdere instanties van een zoekterm in één verzoek kan vervangen."
 		},
 		"INSERT_BLOCK": {
 			"name": "Experimentele inhoud-invoeg-tool gebruiken",

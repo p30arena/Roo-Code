@@ -297,6 +297,9 @@
 		"getZaiApiKey": "Z AI API Anahtarı Al",
 		"zaiEntrypoint": "Z AI Giriş Noktası",
 		"zaiEntrypointDescription": "Konumunuza göre uygun API giriş noktasını seçin. Çin'de iseniz open.bigmodel.cn'yi seçin. Aksi takdirde api.z.ai'yi seçin.",
+		"minimaxApiKey": "MiniMax API Anahtarı",
+		"getMiniMaxApiKey": "MiniMax API Anahtarı Al",
+		"minimaxBaseUrl": "MiniMax Giriş Noktası",
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
@@ -728,10 +731,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Deneysel birleştirilmiş diff stratejisini kullan",
 			"description": "Deneysel birleştirilmiş diff stratejisini etkinleştir. Bu strateji, model hatalarından kaynaklanan yeniden deneme sayısını azaltabilir, ancak beklenmeyen davranışlara veya hatalı düzenlemelere neden olabilir. Yalnızca riskleri anlıyorsanız ve tüm değişiklikleri dikkatlice incelemeye istekliyseniz etkinleştirin."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Deneysel arama ve değiştirme aracını kullan",
-			"description": "Deneysel arama ve değiştirme aracını etkinleştir, Roo'nun tek bir istekte bir arama teriminin birden fazla örneğini değiştirmesine olanak tanır."
 		},
 		"INSERT_BLOCK": {
 			"name": "Deneysel içerik ekleme aracını kullan",

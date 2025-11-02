@@ -269,7 +269,7 @@
 			"success": "Models list refreshed successfully!",
 			"error": "Failed to refresh models list. Please try again."
 		},
-		"getRequestyApiKey": "Get Requesty API Key",
+		"getRequestyApiKey": "Create new Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Use custom base URL",
 		"openRouterTransformsText": "Compress prompts and message chains to the context size (<a>OpenRouter Transforms</a>)",
@@ -298,6 +298,9 @@
 		"moonshotApiKey": "Moonshot API Key",
 		"getMoonshotApiKey": "Get Moonshot API Key",
 		"moonshotBaseUrl": "Moonshot Entrypoint",
+		"minimaxApiKey": "MiniMax API Key",
+		"getMiniMaxApiKey": "Get MiniMax API Key",
+		"minimaxBaseUrl": "MiniMax Entrypoint",
 		"zaiApiKey": "Z AI API Key",
 		"getZaiApiKey": "Get Z AI API Key",
 		"zaiEntrypoint": "Z AI Entrypoint",
@@ -732,10 +735,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Use experimental unified diff strategy",
 			"description": "Enable the experimental unified diff strategy. This strategy might reduce the number of retries caused by model errors but may cause unexpected behavior or incorrect edits. Only enable if you understand the risks and are willing to carefully review all changes."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Use experimental search and replace tool",
-			"description": "Enable the experimental search and replace tool, allowing Roo to replace multiple instances of a search term in one request."
 		},
 		"INSERT_BLOCK": {
 			"name": "Use experimental insert content tool",

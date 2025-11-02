@@ -301,6 +301,9 @@
 		"getZaiApiKey": "Dapatkan Kunci API Z AI",
 		"zaiEntrypoint": "Titik Masuk Z AI",
 		"zaiEntrypointDescription": "Silakan pilih titik masuk API yang sesuai berdasarkan lokasi Anda. Jika Anda berada di China, pilih open.bigmodel.cn. Jika tidak, pilih api.z.ai.",
+		"minimaxApiKey": "Kunci API MiniMax",
+		"getMiniMaxApiKey": "Dapatkan Kunci API MiniMax",
+		"minimaxBaseUrl": "Titik Masuk MiniMax",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Dapatkan Groq API Key",
 		"groqApiKey": "Groq API Key",
@@ -753,10 +756,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Gunakan strategi unified diff eksperimental",
 			"description": "Aktifkan strategi unified diff eksperimental. Strategi ini mungkin mengurangi jumlah retry yang disebabkan oleh error model tetapi dapat menyebabkan perilaku yang tidak terduga atau edit yang salah. Hanya aktifkan jika kamu memahami risikonya dan bersedia meninjau semua perubahan dengan hati-hati."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Gunakan tool search and replace eksperimental",
-			"description": "Aktifkan tool search and replace eksperimental, memungkinkan Roo mengganti beberapa instance dari term pencarian dalam satu permintaan."
 		},
 		"INSERT_BLOCK": {
 			"name": "Gunakan tool insert content eksperimental",

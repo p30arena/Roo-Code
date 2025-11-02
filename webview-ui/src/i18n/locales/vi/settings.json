@@ -297,6 +297,9 @@
 		"getZaiApiKey": "Lấy khóa API Z AI",
 		"zaiEntrypoint": "Điểm vào Z AI",
 		"zaiEntrypointDescription": "Vui lòng chọn điểm vào API phù hợp dựa trên vị trí của bạn. Nếu bạn ở Trung Quốc, hãy chọn open.bigmodel.cn. Ngược lại, hãy chọn api.z.ai.",
+		"minimaxApiKey": "Khóa API MiniMax",
+		"getMiniMaxApiKey": "Lấy khóa API MiniMax",
+		"minimaxBaseUrl": "Điểm vào MiniMax",
 		"geminiApiKey": "Khóa API Gemini",
 		"getGroqApiKey": "Lấy khóa API Groq",
 		"groqApiKey": "Khóa API Groq",
@@ -728,10 +731,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Sử dụng chiến lược diff thống nhất thử nghiệm",
 			"description": "Bật chiến lược diff thống nhất thử nghiệm. Chiến lược này có thể giảm số lần thử lại do lỗi mô hình nhưng có thể gây ra hành vi không mong muốn hoặc chỉnh sửa không chính xác. Chỉ bật nếu bạn hiểu rõ các rủi ro và sẵn sàng xem xét cẩn thận tất cả các thay đổi."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Sử dụng công cụ tìm kiếm và thay thế thử nghiệm",
-			"description": "Bật công cụ tìm kiếm và thay thế thử nghiệm, cho phép Roo thay thế nhiều phiên bản của một thuật ngữ tìm kiếm trong một yêu cầu."
 		},
 		"INSERT_BLOCK": {
 			"name": "Sử dụng công cụ chèn nội dung thử nghiệm",

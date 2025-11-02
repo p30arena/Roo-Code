@@ -297,6 +297,9 @@
 		"getZaiApiKey": "Z AI APIキーを取得",
 		"zaiEntrypoint": "Z AI エントリーポイント",
 		"zaiEntrypointDescription": "お住まいの地域に応じて適切な API エントリーポイントを選択してください。中国にお住まいの場合は open.bigmodel.cn を選択してください。それ以外の場合は api.z.ai を選択してください。",
+		"minimaxApiKey": "MiniMax APIキー",
+		"getMiniMaxApiKey": "MiniMax APIキーを取得",
+		"minimaxBaseUrl": "MiniMax エントリーポイント",
 		"geminiApiKey": "Gemini APIキー",
 		"getGroqApiKey": "Groq APIキーを取得",
 		"groqApiKey": "Groq APIキー",
@@ -728,10 +731,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "実験的な統合diff戦略を使用する",
 			"description": "実験的な統合diff戦略を有効にします。この戦略はモデルエラーによる再試行の回数を減らす可能性がありますが、予期しない動作や不正確な編集を引き起こす可能性があります。リスクを理解し、すべての変更を注意深く確認する準備がある場合にのみ有効にしてください。"
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "実験的な検索と置換ツールを使用する",
-			"description": "実験的な検索と置換ツールを有効にし、Rooが1つのリクエストで検索語の複数のインスタンスを置き換えることを可能にします。"
 		},
 		"INSERT_BLOCK": {
 			"name": "実験的なコンテンツ挿入ツールを使用する",
