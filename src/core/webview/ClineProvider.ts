@@ -50,7 +50,6 @@ import { Package } from "../../shared/package"
 import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
-import { safeJsonParse } from "../../shared/safeJsonParse"
 import type { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } from "../../shared/ExtensionMessage"
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
@@ -144,10 +143,6 @@ export class ClineProvider
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
 	private static readonly PENDING_OPERATION_TIMEOUT_MS = 30000 // 30 seconds
-
-	// Transactional state posting
-	private uiUpdatePaused: boolean = false
-	private pendingState: ExtensionState | null = null
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
@@ -791,7 +786,7 @@ export class ClineProvider
 		webviewView.webview.html =
 			this.contextProxy.extensionMode === vscode.ExtensionMode.Development
 				? await this.getHMRHtmlContent(webviewView.webview)
-				: this.getHtmlContent(webviewView.webview)
+				: await this.getHtmlContent(webviewView.webview)
 
 		// Sets up an event listener to listen for messages passed from the webview view context
 		// and executes code based on the message that is received.
@@ -863,7 +858,13 @@ export class ClineProvider
 	}
 
 	public async createTaskWithHistoryItem(historyItem: HistoryItem & { rootTask?: Task; parentTask?: Task }) {
-		await this.removeClineFromStack()
+		// Check if we're rehydrating the current task to avoid flicker
+		const currentTask = this.getCurrentTask()
+		const isRehydratingCurrentTask = currentTask && currentTask.taskId === historyItem.id
+
+		if (!isRehydratingCurrentTask) {
+			await this.removeClineFromStack()
+		}
 
 		// If the history item has a saved mode, restore it and its associated API configuration.
 		if (historyItem.mode) {
@@ -937,11 +938,46 @@ export class ClineProvider
 			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, taskSyncEnabled),
 		})
 
-		await this.addClineToStack(task)
+		if (isRehydratingCurrentTask) {
+			// Replace the current task in-place to avoid UI flicker
+			const stackIndex = this.clineStack.length - 1
 
-		this.log(
-			`[createTaskWithHistoryItem] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
-		)
+			// Properly dispose of the old task to ensure garbage collection
+			const oldTask = this.clineStack[stackIndex]
+
+			// Abort the old task to stop running processes and mark as abandoned
+			try {
+				await oldTask.abortTask(true)
+			} catch (e) {
+				this.log(
+					`[createTaskWithHistoryItem] abortTask() failed for old task ${oldTask.taskId}.${oldTask.instanceId}: ${e.message}`,
+				)
+			}
+
+			// Remove event listeners from the old task
+			const cleanupFunctions = this.taskEventListeners.get(oldTask)
+			if (cleanupFunctions) {
+				cleanupFunctions.forEach((cleanup) => cleanup())
+				this.taskEventListeners.delete(oldTask)
+			}
+
+			// Replace the task in the stack
+			this.clineStack[stackIndex] = task
+			task.emit(RooCodeEventName.TaskFocused)
+
+			// Perform preparation tasks and set up event listeners
+			await this.performPreparationTasks(task)
+
+			this.log(
+				`[createTaskWithHistoryItem] rehydrated task ${task.taskId}.${task.instanceId} in-place (flicker-free)`,
+			)
+		} else {
+			await this.addClineToStack(task)
+
+			this.log(
+				`[createTaskWithHistoryItem] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
+			)
+		}
 
 		// Check if there's a pending edit after checkpoint restoration
 		const operationId = `task-${task.taskId}`
@@ -1025,6 +1061,12 @@ export class ClineProvider
 
 		const nonce = getNonce()
 
+		// Get the OpenRouter base URL from configuration
+		const { apiConfiguration } = await this.getState()
+		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
+		// Extract the domain for CSP
+		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
 		const stylesUri = getUri(webview, this.contextProxy.extensionUri, [
 			"webview-ui",
 			"build",
@@ -1061,7 +1103,7 @@ export class ClineProvider
 			`img-src ${webview.cspSource} https://storage.googleapis.com https://img.clerk.com data:`,
 			`media-src ${webview.cspSource}`,
 			`script-src 'unsafe-eval' ${webview.cspSource} https://* https://*.posthog.com http://${localServerUrl} http://0.0.0.0:${localPort} 'nonce-${nonce}'`,
-			`connect-src ${webview.cspSource} https://* https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`,
+			`connect-src ${webview.cspSource} ${openRouterDomain} https://* https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`,
 		]
 
 		return /*html*/ `
@@ -1100,7 +1142,7 @@ export class ClineProvider
 	 * @returns A template string literal containing the HTML that should be
 	 * rendered within the webview panel
 	 */
-	private getHtmlContent(webview: vscode.Webview): string {
+	private async getHtmlContent(webview: vscode.Webview): Promise<string> {
 		// Get the local path to main script run in the webview,
 		// then convert it to a uri we can use in the webview.
 
@@ -1135,6 +1177,12 @@ export class ClineProvider
 		*/
 		const nonce = getNonce()
 
+		// Get the OpenRouter base URL from configuration
+		const { apiConfiguration } = await this.getState()
+		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
+		// Extract the domain for CSP
+		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
 		// Tip: Install the es6-string-html VS Code extension to enable code highlighting below
 		return /*html*/ `
         <!DOCTYPE html>
@@ -1143,7 +1191,7 @@ export class ClineProvider
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://storage.googleapis.com https://img.clerk.com data:; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://storage.googleapis.com https://img.clerk.com data:; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} ${openRouterDomain} https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
             <link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
@@ -1629,26 +1677,8 @@ export class ClineProvider
 		await this.postStateToWebview()
 	}
 
-	public beginStateTransaction(): void {
-		this.uiUpdatePaused = true
-	}
-
-	public async endStateTransaction(): Promise<void> {
-		this.uiUpdatePaused = false
-		if (this.pendingState) {
-			await this.view?.webview.postMessage({ type: "state", state: this.pendingState })
-			this.pendingState = null
-		}
-	}
-
 	async postStateToWebview() {
 		const state = await this.getStateToPostToWebview()
-
-		if (this.uiUpdatePaused) {
-			this.pendingState = state
-			return
-		}
-
 		this.postMessageToWebview({ type: "state", state })
 
 		// Check MDM compliance and send user to account tab if not compliant
@@ -2640,13 +2670,24 @@ export class ClineProvider
 
 		console.log(`[cancelTask] cancelling task ${task.taskId}.${task.instanceId}`)
 
-		// Mark this as a user-initiated cancellation
+		const { historyItem, uiMessagesFilePath } = await this.getTaskWithId(task.taskId)
+
+		// Preserve parent and root task information for history item.
+		const rootTask = task.rootTask
+		const parentTask = task.parentTask
+
+		// Mark this as a user-initiated cancellation so provider-only rehydration can occur
 		task.abortReason = "user_cancelled"
 
-		// Soft abort (isAbandoned = false) to keep the instance alive
-		await task.abortTask(false)
+		// Capture the current instance to detect if rehydrate already occurred elsewhere
+		const originalInstanceId = task.instanceId
 
-		// Wait for abort to complete
+		// Begin abort (non-blocking)
+		task.abortTask()
+
+		// Immediately mark the original instance as abandoned to prevent any residual activity
+		task.abandoned = true
+
 		await pWaitFor(
 			() =>
 				this.getCurrentTask()! === undefined ||
@@ -2663,52 +2704,28 @@ export class ClineProvider
 			console.error("Failed to abort task")
 		})
 
-		// Deterministic spinner stop: If the last api_req_started has no cost and no cancelReason,
-		// inject cancelReason to stop the spinner
-		try {
-			let lastApiReqStartedIndex = -1
-			for (let i = task.clineMessages.length - 1; i >= 0; i--) {
-				if (task.clineMessages[i].type === "say" && task.clineMessages[i].say === "api_req_started") {
-					lastApiReqStartedIndex = i
-					break
-				}
-			}
-
-			if (lastApiReqStartedIndex !== -1) {
-				const lastApiReqStarted = task.clineMessages[lastApiReqStartedIndex]
-				const apiReqInfo = safeJsonParse<{ cost?: number; cancelReason?: string }>(
-					lastApiReqStarted.text || "{}",
-					{},
-				)
-
-				if (apiReqInfo && apiReqInfo.cost === undefined && apiReqInfo.cancelReason === undefined) {
-					apiReqInfo.cancelReason = "user_cancelled"
-					lastApiReqStarted.text = JSON.stringify(apiReqInfo)
-					await task.overwriteClineMessages([...task.clineMessages])
-					console.log(`[cancelTask] Injected cancelReason for deterministic spinner stop`)
-				}
-			}
-		} catch (error) {
-			console.error(`[cancelTask] Failed to inject cancelReason:`, error)
+		// Defensive safeguard: if current instance already changed, skip rehydrate
+		const current = this.getCurrentTask()
+		if (current && current.instanceId !== originalInstanceId) {
+			this.log(
+				`[cancelTask] Skipping rehydrate: current instance ${current.instanceId} != original ${originalInstanceId}`,
+			)
+			return
 		}
 
-		// Update UI immediately to reflect current state
-		await this.postStateToWebview()
-
-		// Schedule non-blocking resumption to present "Resume Task" ask
-		// Use setImmediate to avoid blocking the webview handler
-		setImmediate(() => {
-			if (task && !task.abandoned) {
-				// Present a resume ask without rehydrating - just show the Resume/Terminate UI
-				task.presentResumableAsk().catch((error) => {
-					console.error(
-						`[cancelTask] Failed to present resume ask: ${
-							error instanceof Error ? error.message : String(error)
-						}`,
-					)
-				})
+		// Final race check before rehydrate to avoid duplicate rehydration
+		{
+			const currentAfterCheck = this.getCurrentTask()
+			if (currentAfterCheck && currentAfterCheck.instanceId !== originalInstanceId) {
+				this.log(
+					`[cancelTask] Skipping rehydrate after final check: current instance ${currentAfterCheck.instanceId} != original ${originalInstanceId}`,
+				)
+				return
 			}
-		})
+		}
+
+		// Clears task again, so we need to abortTask manually above.
+		await this.createTaskWithHistoryItem({ ...historyItem, rootTask, parentTask })
 	}
 
 	// Clear the current task without treating it as a subtask.
