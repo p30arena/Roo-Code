@@ -1,5 +1,34 @@
 # Roo Code Changelog
 
+## [3.31.2] - 2025-11-12
+
+- Fix: Apply updated API profile settings when provider/model unchanged (#9208 by @hannesrudolph, PR by @hannesrudolph)
+- Migrate conversation continuity to plugin-side encrypted reasoning items using Responses API for improved reliability (thanks @hannesrudolph!)
+- Fix: Include mcpServers in getState() for auto-approval (#9190 by @bozoweed, PR by @daniel-lxs)
+- Batch settings updates from the webview to the extension host for improved performance (thanks @cte!)
+- Fix: Replace rate-limited badges with badgen.net to improve README reliability (thanks @daniel-lxs!)
+
+## [3.31.1] - 2025-11-11
+
+![3.31.1 Release - Kangaroo Stuck in the Clouds](/releases/3.31.1-release.png)
+
+- Fix: Prevent command_output ask from blocking in cloud/headless environments (thanks @daniel-lxs!)
+- Add IPC command for sending messages to the current task (thanks @mrubens!)
+- Fix: Model switch re-applies selected profile, ensuring task configuration stays in sync (#9179 by @hannesrudolph, PR by @hannesrudolph)
+- Move auto-approval logic from `ChatView` to `Task` for better architecture (thanks @cte!)
+- Add custom Button component with variant system (thanks @brunobergher!)
+
+## [3.31.0] - 2025-11-07
+
+![3.31.0 Release - Todo List and Task Header Improvements](/releases/3.31.0-release.png)
+
+- Improvements to to-do lists and task headers (thanks @brunobergher!)
+- Fix: Prevent crash when streaming chunks have null choices array (thanks @daniel-lxs!)
+- Fix: Prevent context condensing on settings save when provider/model unchanged (#4430 by @hannesrudolph, PR by @daniel-lxs)
+- Fix: Respect custom OpenRouter URL for all API operations (#8947 by @sstraus, PR by @roomote)
+- Add comprehensive error logging to Roo Cloud provider (thanks @daniel-lxs!)
+- UX: Less caffeinated kangaroo (thanks @brunobergher!)
+
 ## [3.30.3] - 2025-11-06
 
 ![3.30.3 Release - Moonshot Brain](/releases/3.30.3-release.png)
