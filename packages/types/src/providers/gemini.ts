@@ -6,6 +6,33 @@ export type GeminiModelId = keyof typeof geminiModels
 export const geminiDefaultModelId: GeminiModelId = "gemini-2.0-flash-001"
 
 export const geminiModels = {
+	"gemini-3-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
+		outputPrice: 15,
+		cacheReadsPrice: 0.625,
+		cacheWritesPrice: 4.5,
+		maxThinkingTokens: 32_768,
+		supportsReasoningBudget: true,
+		requiredReasoningBudget: true,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12,
+				cacheReadsPrice: 0.31,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18,
+				cacheReadsPrice: 0.625,
+			},
+		],
+	},
 	// Latest models (pointing to the most recent stable versions)
 	"gemini-flash-latest": {
 		maxTokens: 65_536,
