@@ -10,7 +10,7 @@ import delay from "delay"
 import pWaitFor from "p-wait-for"
 import { serializeError } from "serialize-error"
 import { Package } from "../../shared/package"
-import { getCurrentToolProtocol, formatToolInvocation } from "../tools/helpers/toolResultFormatting"
+import { formatToolInvocation } from "../tools/helpers/toolResultFormatting"
 
 import {
 	type TaskLike,
@@ -27,6 +27,7 @@ import {
 	type ToolProgressStatus,
 	type HistoryItem,
 	type CreateTaskOptions,
+	type ModelInfo,
 	RooCodeEventName,
 	TelemetryEventName,
 	TaskStatus,
@@ -46,7 +47,6 @@ import {
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
-import { getToolProtocolFromSettings } from "../../utils/toolProtocol"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
 // api
@@ -231,7 +231,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private pauseInterval: NodeJS.Timeout | undefined
 
 	// API
-	readonly apiConfiguration: ProviderSettings
+	apiConfiguration: ProviderSettings
 	api: ApiHandler
 	private static lastGlobalApiRequestTime?: number
 	private autoApprovalHandler: AutoApprovalHandler
@@ -304,6 +304,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	didAlreadyUseTool = false
 	didCompleteReadingStream = false
 	assistantMessageParser?: AssistantMessageParser
+	private providerProfileChangeListener?: (config: { name: string; provider?: string }) => void
+
+	// Cached model info for current streaming session (set at start of each API request)
+	// This prevents excessive getModel() calls during tool execution
+	cachedStreamingModel?: { id: string; info: ModelInfo }
 
 	// Token Usage Cache
 	private tokenUsageSnapshot?: TokenUsage
@@ -321,6 +326,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		task,
 		images,
 		historyItem,
+		experiments: experimentsConfig,
 		startTask = true,
 		rootTask,
 		parentTask,
@@ -410,12 +416,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		// Initialize the assistant message parser only for XML protocol.
 		// For native protocol, tool calls come as tool_call chunks, not XML.
-		const toolProtocol = resolveToolProtocol(
-			this.apiConfiguration,
-			this.api.getModel().info,
-			this.apiConfiguration.apiProvider,
-		)
-		this.assistantMessageParser = toolProtocol === "xml" ? new AssistantMessageParser() : undefined
+		// experiments is always provided via TaskOptions (defaults to experimentDefault in provider)
+		const modelInfo = this.api.getModel().info
+		const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
+		this.assistantMessageParser = toolProtocol !== "native" ? new AssistantMessageParser() : undefined
 
 		this.messageQueueService = new MessageQueueService()
 
@@ -425,6 +429,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		this.messageQueueService.on("stateChanged", this.messageQueueStateChangedHandler)
+
+		// Listen for provider profile changes to update parser state
+		this.setupProviderProfileChangeListener(provider)
 
 		// Only set up diff strategy if diff is enabled.
 		if (this.diffEnabled) {
@@ -496,6 +503,36 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const errorMessage = `Failed to initialize task mode: ${error instanceof Error ? error.message : String(error)}`
 			provider.log(errorMessage)
 		}
+	}
+
+	/**
+	 * Sets up a listener for provider profile changes to automatically update the parser state.
+	 * This ensures the XML/native protocol parser stays synchronized with the current model.
+	 *
+	 * @private
+	 * @param provider - The ClineProvider instance to listen to
+	 */
+	private setupProviderProfileChangeListener(provider: ClineProvider): void {
+		// Only set up listener if provider has the on method (may not exist in test mocks)
+		if (typeof provider.on !== "function") {
+			return
+		}
+
+		this.providerProfileChangeListener = async () => {
+			try {
+				const newState = await provider.getState()
+				if (newState?.apiConfiguration) {
+					await this.updateApiConfiguration(newState.apiConfiguration)
+				}
+			} catch (error) {
+				console.error(
+					`[Task#${this.taskId}.${this.instanceId}] Failed to update API configuration on profile change:`,
+					error,
+				)
+			}
+		}
+
+		provider.on(RooCodeEventName.ProviderProfileChanged, this.providerProfileChangeListener)
 	}
 
 	/**
@@ -611,16 +648,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	private async addToApiConversationHistory(message: Anthropic.MessageParam) {
-		// Capture the encrypted_content from the provider (e.g., OpenAI Responses API) if present.
+		// Capture the encrypted_content / thought signatures from the provider (e.g., OpenAI Responses API, Google GenAI) if present.
 		// We only persist data reported by the current response body.
 		const handler = this.api as ApiHandler & {
 			getResponseId?: () => string | undefined
 			getEncryptedContent?: () => { encrypted_content: string; id?: string } | undefined
+			getThoughtSignature?: () => string | undefined
 		}
 
 		if (message.role === "assistant") {
 			const responseId = handler.getResponseId?.()
 			const reasoningData = handler.getEncryptedContent?.()
+			const thoughtSignature = handler.getThoughtSignature?.()
 
 			// Start from the original assistant message
 			const messageWithTs: any = {
@@ -649,6 +688,26 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					messageWithTs.content = [reasoningBlock, ...messageWithTs.content]
 				} else if (!messageWithTs.content) {
 					messageWithTs.content = [reasoningBlock]
+				}
+			}
+
+			// If we have a thought signature, append it as a dedicated content block
+			// so it can be round-tripped in api_history.json and re-sent on subsequent calls.
+			if (thoughtSignature) {
+				const thoughtSignatureBlock = {
+					type: "thoughtSignature",
+					thoughtSignature,
+				}
+
+				if (typeof messageWithTs.content === "string") {
+					messageWithTs.content = [
+						{ type: "text", text: messageWithTs.content } satisfies Anthropic.Messages.TextBlockParam,
+						thoughtSignatureBlock,
+					]
+				} else if (Array.isArray(messageWithTs.content)) {
+					messageWithTs.content = [...messageWithTs.content, thoughtSignatureBlock]
+				} else if (!messageWithTs.content) {
+					messageWithTs.content = [thoughtSignatureBlock]
 				}
 			}
 
@@ -1032,6 +1091,49 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.handleWebviewAskResponse("noButtonClicked", text, images)
 	}
 
+	/**
+	 * Updates the API configuration and reinitializes the parser based on the new tool protocol.
+	 * This should be called when switching between models/profiles with different tool protocols
+	 * to prevent the parser from being left in an inconsistent state.
+	 *
+	 * @param newApiConfiguration - The new API configuration to use
+	 */
+	public async updateApiConfiguration(newApiConfiguration: ProviderSettings): Promise<void> {
+		// Determine the previous protocol before updating
+		const prevModelInfo = this.api.getModel().info
+		const previousProtocol = this.apiConfiguration
+			? resolveToolProtocol(this.apiConfiguration, prevModelInfo)
+			: undefined
+
+		this.apiConfiguration = newApiConfiguration
+		this.api = buildApiHandler(newApiConfiguration)
+
+		// Determine the new tool protocol
+		const newModelInfo = this.api.getModel().info
+		const newProtocol = resolveToolProtocol(this.apiConfiguration, newModelInfo)
+		const shouldUseXmlParser = newProtocol === "xml"
+
+		// Only make changes if the protocol actually changed
+		if (previousProtocol === newProtocol) {
+			console.log(
+				`[Task#${this.taskId}.${this.instanceId}] Tool protocol unchanged (${newProtocol}), no parser update needed`,
+			)
+			return
+		}
+
+		// Handle protocol transitions
+		if (shouldUseXmlParser && !this.assistantMessageParser) {
+			// Switching from native → XML: create parser
+			this.assistantMessageParser = new AssistantMessageParser()
+			console.log(`[Task#${this.taskId}.${this.instanceId}] Switched native → xml: initialized XML parser`)
+		} else if (!shouldUseXmlParser && this.assistantMessageParser) {
+			// Switching from XML → native: remove parser
+			this.assistantMessageParser.reset()
+			this.assistantMessageParser = undefined
+			console.log(`[Task#${this.taskId}.${this.instanceId}] Switched xml → native: removed XML parser`)
+		}
+	}
+
 	public async submitUserMessage(
 		text: string,
 		images?: string[],
@@ -1055,6 +1157,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 				if (providerProfile) {
 					await provider.setProviderProfile(providerProfile)
+
+					// Update this task's API configuration to match the new profile
+					// This ensures the parser state is synchronized with the selected model
+					const newState = await provider.getState()
+					if (newState?.apiConfiguration) {
+						await this.updateApiConfiguration(newState.apiConfiguration)
+					}
 				}
 
 				this.emit(RooCodeEventName.TaskUserMessage, this.taskId)
@@ -1268,7 +1377,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			} without value for required parameter '${paramName}'. Retrying...`,
 		)
 		const modelInfo = this.api.getModel().info
-		const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo, this.apiConfiguration.apiProvider)
+		const state = await this.providerRef.deref()?.getState()
+		const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
 		return formatResponse.toolError(formatResponse.missingToolParameterError(paramName, toolProtocol))
 	}
 
@@ -1407,46 +1517,49 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// even if it goes out of sync with cline messages.
 		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()
 
-		// v2.0 xml tags refactor caveat: since we don't use tools anymore, we need to replace all tool use blocks with a text block since the API disallows conversations with tool uses and no tool schema
-		// Now also protocol-aware: format according to current protocol setting
-		const protocol = resolveToolProtocol(
-			this.apiConfiguration,
-			this.api.getModel().info,
-			this.apiConfiguration.apiProvider,
-		)
+		// v2.0 xml tags refactor caveat: since we don't use tools anymore for XML protocol,
+		// we need to replace all tool use blocks with a text block since the API disallows
+		// conversations with tool uses and no tool schema.
+		// For native protocol, we preserve tool_use and tool_result blocks as they're expected by the API.
+		const state = await this.providerRef.deref()?.getState()
+		const protocol = resolveToolProtocol(this.apiConfiguration, this.api.getModel().info)
 		const useNative = isNativeProtocol(protocol)
 
-		const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
-			if (Array.isArray(message.content)) {
-				const newContent = message.content.map((block) => {
-					if (block.type === "tool_use") {
-						// Format tool invocation based on protocol
-						const params = block.input as Record<string, any>
-						const formattedText = formatToolInvocation(block.name, params, protocol)
+		// Only convert tool blocks to text for XML protocol
+		// For native protocol, the API expects proper tool_use/tool_result structure
+		if (!useNative) {
+			const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
+				if (Array.isArray(message.content)) {
+					const newContent = message.content.map((block) => {
+						if (block.type === "tool_use") {
+							// Format tool invocation based on protocol
+							const params = block.input as Record<string, any>
+							const formattedText = formatToolInvocation(block.name, params, protocol)
 
-						return {
-							type: "text",
-							text: formattedText,
-						} as Anthropic.Messages.TextBlockParam
-					} else if (block.type === "tool_result") {
-						// Convert block.content to text block array, removing images
-						const contentAsTextBlocks = Array.isArray(block.content)
-							? block.content.filter((item) => item.type === "text")
-							: [{ type: "text", text: block.content }]
-						const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
-						const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
-						return {
-							type: "text",
-							text: `[${toolName} Result]\n\n${textContent}`,
-						} as Anthropic.Messages.TextBlockParam
-					}
-					return block
-				})
-				return { ...message, content: newContent }
-			}
-			return message
-		})
-		existingApiConversationHistory = conversationWithoutToolBlocks
+							return {
+								type: "text",
+								text: formattedText,
+							} as Anthropic.Messages.TextBlockParam
+						} else if (block.type === "tool_result") {
+							// Convert block.content to text block array, removing images
+							const contentAsTextBlocks = Array.isArray(block.content)
+								? block.content.filter((item) => item.type === "text")
+								: [{ type: "text", text: block.content }]
+							const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
+							const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
+							return {
+								type: "text",
+								text: `[${toolName} Result]\n\n${textContent}`,
+							} as Anthropic.Messages.TextBlockParam
+						}
+						return block
+					})
+					return { ...message, content: newContent }
+				}
+				return message
+			})
+			existingApiConversationHistory = conversationWithoutToolBlocks
+		}
 
 		// FIXME: remove tool use blocks altogether
 
@@ -1606,6 +1719,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	public dispose(): void {
 		console.log(`[Task#dispose] disposing task ${this.taskId}.${this.instanceId}`)
+
+		// Remove provider profile change listener
+		try {
+			if (this.providerProfileChangeListener) {
+				const provider = this.providerRef.deref()
+				if (provider) {
+					provider.off(RooCodeEventName.ProviderProfileChanged, this.providerProfileChangeListener)
+				}
+				this.providerProfileChangeListener = undefined
+			}
+		} catch (error) {
+			console.error("Error removing provider profile change listener:", error)
+		}
 
 		// Dispose message queue and remove event listeners.
 		try {
@@ -1786,11 +1912,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				break
 			} else {
 				const modelInfo = this.api.getModel().info
-				const toolProtocol = resolveToolProtocol(
-					this.apiConfiguration,
-					modelInfo,
-					this.apiConfiguration.apiProvider,
-				)
+				const state = await this.providerRef.deref()?.getState()
+				const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
 				nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed(toolProtocol) }]
 				this.consecutiveMistakeCount++
 			}
@@ -1956,14 +2079,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					const costResult =
 						apiProtocol === "anthropic"
 							? calculateApiCostAnthropic(
-									this.api.getModel().info,
+									streamModelInfo,
 									inputTokens,
 									outputTokens,
 									cacheWriteTokens,
 									cacheReadTokens,
 								)
 							: calculateApiCostOpenAI(
-									this.api.getModel().info,
+									streamModelInfo,
 									inputTokens,
 									outputTokens,
 									cacheWriteTokens,
@@ -2021,6 +2144,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				this.assistantMessageParser?.reset()
 
 				await this.diffViewProvider.reset()
+
+				// Cache model info once per API request to avoid repeated calls during streaming
+				// This is especially important for tools and background usage collection
+				this.cachedStreamingModel = this.api.getModel()
+				const streamModelInfo = this.cachedStreamingModel.info
+				const cachedModelId = this.cachedStreamingModel.id
+				const streamProtocol = resolveToolProtocol(this.apiConfiguration, streamModelInfo)
+				const shouldUseXmlParser = streamProtocol === "xml"
 
 				// Yields only if the first chunk is successful, otherwise will
 				// allow the user to retry the request (most likely due to rate
@@ -2104,7 +2235,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							case "text": {
 								assistantMessage += chunk.text
 
-								if (this.assistantMessageParser) {
+								// Use the protocol determined at the start of streaming
+								// Don't rely solely on parser existence - parser might exist from previous state
+								if (shouldUseXmlParser && this.assistantMessageParser) {
 									// XML protocol: Parse raw assistant message chunk into content blocks
 									const prevLength = this.assistantMessageContent.length
 									this.assistantMessageContent = this.assistantMessageParser.processChunk(chunk.text)
@@ -2238,14 +2371,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								const costResult =
 									apiProtocol === "anthropic"
 										? calculateApiCostAnthropic(
-												this.api.getModel().info,
+												streamModelInfo,
 												tokens.input,
 												tokens.output,
 												tokens.cacheWrite,
 												tokens.cacheRead,
 											)
 										: calculateApiCostOpenAI(
-												this.api.getModel().info,
+												streamModelInfo,
 												tokens.input,
 												tokens.output,
 												tokens.cacheWrite,
@@ -2430,33 +2563,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// this.assistantMessageContent.forEach((e) => (e.partial = false))
 
 				// Now that the stream is complete, finalize any remaining partial content blocks (XML protocol only)
-				if (this.assistantMessageParser) {
+				// Use the protocol determined at the start of streaming
+				if (shouldUseXmlParser && this.assistantMessageParser) {
 					this.assistantMessageParser.finalizeContentBlocks()
-
 					const parsedBlocks = this.assistantMessageParser.getContentBlocks()
-
-					// Check if we're using native protocol
-					const isNative = isNativeProtocol(
-						resolveToolProtocol(
-							this.apiConfiguration,
-							this.api.getModel().info,
-							this.apiConfiguration.apiProvider,
-						),
-					)
-
-					if (isNative) {
-						// For native protocol: Preserve tool_use blocks that were added via tool_call chunks
-						// These are added directly to assistantMessageContent and have an 'id' property
-						const nativeToolBlocks = this.assistantMessageContent.filter(
-							(block): block is ToolUse<any> =>
-								block.type === "tool_use" && (block as any).id !== undefined,
-						)
-						// Merge: parser blocks (text) + native tool blocks (tools with IDs)
-						this.assistantMessageContent = [...parsedBlocks, ...nativeToolBlocks]
-					} else {
-						// For XML protocol: Use only parsed blocks (includes both text and tool_use parsed from XML)
-						this.assistantMessageContent = parsedBlocks
-					}
+					// For XML protocol: Use only parsed blocks (includes both text and tool_use parsed from XML)
+					this.assistantMessageContent = parsedBlocks
 				}
 
 				if (partialBlocks.length > 0) {
@@ -2516,7 +2628,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					// Check if we should preserve reasoning in the assistant message
 					let finalAssistantMessage = assistantMessage
-					if (reasoningMessage && this.api.getModel().info.preserveReasoning) {
+					if (reasoningMessage && streamModelInfo.preserveReasoning) {
 						// Prepend reasoning in XML tags to the assistant message so it's included in API history
 						finalAssistantMessage = `<think>${reasoningMessage}</think>\n${assistantMessage}`
 					}
@@ -2581,11 +2693,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					if (!didToolUse) {
 						const modelInfo = this.api.getModel().info
-						const toolProtocol = resolveToolProtocol(
-							this.apiConfiguration,
-							modelInfo,
-							this.apiConfiguration.apiProvider,
-						)
+						const state = await this.providerRef.deref()?.getState()
+						const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
 						this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed(toolProtocol) })
 						this.consecutiveMistakeCount++
 					}
@@ -2610,14 +2719,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// apiConversationHistory at line 1876. Since the assistant failed to respond,
 					// we need to remove that message before retrying to avoid having two consecutive
 					// user messages (which would cause tool_result validation errors).
+					let state = await this.providerRef.deref()?.getState()
 					if (
-						isNativeProtocol(
-							resolveToolProtocol(
-								this.apiConfiguration,
-								this.api.getModel().info,
-								this.apiConfiguration.apiProvider,
-							),
-						) &&
+						isNativeProtocol(resolveToolProtocol(this.apiConfiguration, this.api.getModel().info)) &&
 						this.apiConversationHistory.length > 0
 					) {
 						const lastMessage = this.apiConversationHistory[this.apiConversationHistory.length - 1]
@@ -2628,7 +2732,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 
 					// Check if we should auto-retry or prompt the user
-					const state = await this.providerRef.deref()?.getState()
+					// Reuse the state variable from above
 					if (state?.autoApprovalEnabled && state?.alwaysApproveResubmit) {
 						// Auto-retry with backoff - don't persist failure message when retrying
 						const errorMsg =
@@ -2681,14 +2785,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						} else {
 							// User declined to retry
 							// For native protocol, re-add the user message we removed
+							// Reuse the state variable from above
 							if (
-								isNativeProtocol(
-									resolveToolProtocol(
-										this.apiConfiguration,
-										this.api.getModel().info,
-										this.apiConfiguration.apiProvider,
-									),
-								)
+								isNativeProtocol(resolveToolProtocol(this.apiConfiguration, this.api.getModel().info))
 							) {
 								await this.addToApiConversationHistory({
 									role: "user",
@@ -2787,11 +2886,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const canUseBrowserTool = modelSupportsBrowser && modeSupportsBrowser && (browserToolEnabled ?? true)
 
 			// Resolve the tool protocol based on profile, model, and provider settings
-			const toolProtocol = resolveToolProtocol(
-				apiConfiguration ?? this.apiConfiguration,
-				modelInfo,
-				(apiConfiguration ?? this.apiConfiguration)?.apiProvider,
-			)
+			const toolProtocol = resolveToolProtocol(apiConfiguration ?? this.apiConfiguration, modelInfo)
 
 			return SYSTEM_PROMPT(
 				provider.context,
@@ -3030,7 +3125,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// 1. Tool protocol is set to NATIVE
 		// 2. Model supports native tools
 		const modelInfo = this.api.getModel().info
-		const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo, this.apiConfiguration.apiProvider)
+		const toolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
 		const shouldIncludeTools = toolProtocol === TOOL_PROTOCOL.NATIVE && (modelInfo.supportsNativeTools ?? false)
 
 		// Build complete tools array: native tools + dynamic MCP tools, filtered by mode restrictions

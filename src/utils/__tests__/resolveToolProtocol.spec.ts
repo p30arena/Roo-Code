@@ -1,20 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect } from "vitest"
 import { resolveToolProtocol } from "../resolveToolProtocol"
 import { TOOL_PROTOCOL } from "@roo-code/types"
-import type { ProviderSettings, ModelInfo, ProviderName } from "@roo-code/types"
-import * as toolProtocolModule from "../toolProtocol"
-
-// Mock the getToolProtocolFromSettings function
-vi.mock("../toolProtocol", () => ({
-	getToolProtocolFromSettings: vi.fn(() => "xml"),
-}))
+import type { ProviderSettings, ModelInfo } from "@roo-code/types"
 
 describe("resolveToolProtocol", () => {
-	beforeEach(() => {
-		// Reset mock before each test
-		vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("xml")
-	})
-
 	describe("Precedence Level 1: User Profile Setting", () => {
 		it("should use profile toolProtocol when explicitly set to xml", () => {
 			const settings: ProviderSettings = {
@@ -36,7 +25,7 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: true, // Model supports native tools
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "anthropic")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.NATIVE)
 		})
 
@@ -50,8 +39,9 @@ describe("resolveToolProtocol", () => {
 				contextWindow: 128000,
 				supportsPromptCache: false,
 				defaultToolProtocol: "native",
+				supportsNativeTools: true,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Profile setting wins
 		})
 
@@ -66,47 +56,13 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: true,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Profile setting wins
 		})
 	})
 
-	describe("Precedence Level 2: Global User Preference (VSCode Setting)", () => {
-		it("should use global setting when no profile setting", () => {
-			vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("native")
-			const settings: ProviderSettings = {
-				apiProvider: "roo",
-			}
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 128000,
-				supportsPromptCache: false,
-				supportsNativeTools: true, // Model supports native tools
-			}
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
-			expect(result).toBe(TOOL_PROTOCOL.NATIVE) // Global setting wins over provider default
-		})
-
-		it("should use global setting over model default", () => {
-			vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("native")
-			const settings: ProviderSettings = {
-				apiProvider: "roo",
-			}
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 128000,
-				supportsPromptCache: false,
-				defaultToolProtocol: "xml", // Model prefers XML
-				supportsNativeTools: true, // But model supports native tools
-			}
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
-			expect(result).toBe(TOOL_PROTOCOL.NATIVE) // Global setting wins
-		})
-	})
-
-	describe("Precedence Level 3: Model Default", () => {
-		it("should use model defaultToolProtocol when no profile or global setting", () => {
-			vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("xml")
+	describe("Precedence Level 2: Model Default", () => {
+		it("should use model defaultToolProtocol when no profile setting", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "roo",
 			}
@@ -117,8 +73,8 @@ describe("resolveToolProtocol", () => {
 				defaultToolProtocol: "native",
 				supportsNativeTools: true, // Model must support native tools
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
-			expect(result).toBe(TOOL_PROTOCOL.NATIVE) // Model default wins when global is XML (default)
+			const result = resolveToolProtocol(settings, modelInfo)
+			expect(result).toBe(TOOL_PROTOCOL.NATIVE) // Model default wins when experiment is disabled
 		})
 
 		it("should override model capability when model default is present", () => {
@@ -132,41 +88,13 @@ describe("resolveToolProtocol", () => {
 				defaultToolProtocol: "xml",
 				supportsNativeTools: true,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Model default wins over capability
 		})
 	})
 
 	describe("Support Validation", () => {
-		it("should use provider default (XML) even when model supports native tools", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "openai-native",
-			}
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 128000,
-				supportsPromptCache: false,
-				supportsNativeTools: true,
-			}
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Provider default is XML (list is empty)
-		})
-
-		it("should fall back to XML when provider default is native but model doesn't support it", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "openai-native",
-			}
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 128000,
-				supportsPromptCache: false,
-				supportsNativeTools: false, // Model doesn't support native
-			}
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Falls back to XML due to lack of support
-		})
-
-		it("should use provider default (XML) when model doesn't support native", () => {
+		it("should fall back to XML when model doesn't support native", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "anthropic",
 			}
@@ -176,8 +104,8 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: false,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "anthropic")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Provider default is XML
+			const result = resolveToolProtocol(settings, modelInfo)
+			expect(result).toBe(TOOL_PROTOCOL.XML)
 		})
 
 		it("should fall back to XML when user prefers native but model doesn't support it", () => {
@@ -191,7 +119,7 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: false, // But model doesn't support it
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "anthropic")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Falls back to XML due to lack of support
 		})
 
@@ -206,83 +134,24 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				// supportsNativeTools is undefined (not specified)
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "anthropic")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Falls back to XML - undefined treated as unsupported
 		})
 	})
 
-	describe("Precedence Level 4: Provider Default", () => {
-		it("should use XML for all providers by default (when nativePreferredProviders is empty)", () => {
+	describe("Precedence Level 3: XML Fallback", () => {
+		it("should use XML fallback when no model default is specified", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "anthropic",
 			}
-			const result = resolveToolProtocol(settings, undefined, "anthropic")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-
-		it("should use XML for Bedrock provider", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "bedrock",
-			}
-			const result = resolveToolProtocol(settings, undefined, "bedrock")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-
-		it("should use XML for Claude Code provider", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "claude-code",
-			}
-			const result = resolveToolProtocol(settings, undefined, "claude-code")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-
-		it("should use XML for OpenAI Native provider (when not in native list)", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "openai-native",
-			}
-			const result = resolveToolProtocol(settings, undefined, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-
-		it("should use XML for Roo provider (when not in native list)", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "roo",
-			}
-			const result = resolveToolProtocol(settings, undefined, "roo")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-
-		it("should use XML for Gemini provider (when not in native list)", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "gemini",
-			}
-			const result = resolveToolProtocol(settings, undefined, "gemini")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-
-		it("should use XML for Mistral provider (when not in native list)", () => {
-			const settings: ProviderSettings = {
-				apiProvider: "mistral",
-			}
-			const result = resolveToolProtocol(settings, undefined, "mistral")
-			expect(result).toBe(TOOL_PROTOCOL.XML)
-		})
-	})
-
-	describe("Precedence Level 5: XML Fallback", () => {
-		it("should use XML fallback when no provider is specified and no preferences", () => {
-			vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("xml")
-			const settings: ProviderSettings = {}
-			const result = resolveToolProtocol(settings, undefined, undefined)
+			const result = resolveToolProtocol(settings, undefined)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // XML fallback
 		})
 	})
 
 	describe("Complete Precedence Chain", () => {
-		it("should respect full precedence: Profile > Model Default > Model Capability > Provider > Global", () => {
+		it("should respect full precedence: Profile > Model Default > XML Fallback", () => {
 			// Set up a scenario with all levels defined
-			vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("xml")
-
 			const settings: ProviderSettings = {
 				toolProtocol: "native", // Level 1: User profile setting
 				apiProvider: "roo",
@@ -293,13 +162,10 @@ describe("resolveToolProtocol", () => {
 				contextWindow: 128000,
 				supportsPromptCache: false,
 				defaultToolProtocol: "xml", // Level 2: Model default
-				supportsNativeTools: true, // Level 3: Model capability
+				supportsNativeTools: true, // Support check
 			}
 
-			// Level 4: Provider default would be "native" for roo
-			// Level 5: Global setting is "xml"
-
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.NATIVE) // Profile setting wins
 		})
 
@@ -313,14 +179,14 @@ describe("resolveToolProtocol", () => {
 				contextWindow: 128000,
 				supportsPromptCache: false,
 				defaultToolProtocol: "xml", // Level 2
-				supportsNativeTools: true, // Support check (doesn't affect precedence)
+				supportsNativeTools: true, // Support check
 			}
 
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Model default wins over provider default
+			const result = resolveToolProtocol(settings, modelInfo)
+			expect(result).toBe(TOOL_PROTOCOL.XML) // Model default wins
 		})
 
-		it("should skip to provider default when profile and model default are undefined", () => {
+		it("should skip to XML fallback when profile and model default are undefined", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "openai-native",
 			}
@@ -329,36 +195,20 @@ describe("resolveToolProtocol", () => {
 				maxTokens: 4096,
 				contextWindow: 128000,
 				supportsPromptCache: false,
-				supportsNativeTools: true, // Support check (doesn't affect precedence)
+				supportsNativeTools: true,
 			}
 
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Provider default (XML for all when list is empty)
+			const result = resolveToolProtocol(settings, modelInfo)
+			expect(result).toBe(TOOL_PROTOCOL.XML) // XML fallback
 		})
 
-		it("should skip to provider default when model info is unavailable", () => {
+		it("should skip to XML fallback when model info is unavailable", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "anthropic",
 			}
 
-			const result = resolveToolProtocol(settings, undefined, "anthropic")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Provider default wins
-		})
-
-		it("should use global setting over provider default", () => {
-			vi.mocked(toolProtocolModule.getToolProtocolFromSettings).mockReturnValue("native")
-			const settings: ProviderSettings = {
-				apiProvider: "ollama", // Provider not in native list, defaults to XML
-			}
-			const modelInfo: ModelInfo = {
-				maxTokens: 4096,
-				contextWindow: 128000,
-				supportsPromptCache: false,
-				supportsNativeTools: true, // Model supports native tools
-			}
-
-			const result = resolveToolProtocol(settings, modelInfo, "ollama")
-			expect(result).toBe(TOOL_PROTOCOL.NATIVE) // Global setting wins over provider default
+			const result = resolveToolProtocol(settings, undefined)
+			expect(result).toBe(TOOL_PROTOCOL.XML) // XML fallback
 		})
 	})
 
@@ -373,11 +223,11 @@ describe("resolveToolProtocol", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "openai-native",
 			}
-			const result = resolveToolProtocol(settings, undefined, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Provider default (XML for all)
+			const result = resolveToolProtocol(settings, undefined)
+			expect(result).toBe(TOOL_PROTOCOL.XML) // XML fallback
 		})
 
-		it("should fall back to XML when provider prefers native but model doesn't support it", () => {
+		it("should fall back to XML when model doesn't support native", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "roo",
 			}
@@ -387,13 +237,13 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: false, // Model doesn't support native
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Falls back to XML due to lack of support
 		})
 	})
 
 	describe("Real-world Scenarios", () => {
-		it("should use XML for GPT-4 with OpenAI provider (when list is empty)", () => {
+		it("should use XML fallback for models without defaultToolProtocol", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "openai-native",
 			}
@@ -403,8 +253,8 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: true,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Provider default is XML
+			const result = resolveToolProtocol(settings, modelInfo)
+			expect(result).toBe(TOOL_PROTOCOL.XML) // XML fallback
 		})
 
 		it("should use XML for Claude models with Anthropic provider", () => {
@@ -417,7 +267,7 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: true,
 				supportsNativeTools: false,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "anthropic")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML)
 		})
 
@@ -433,7 +283,7 @@ describe("resolveToolProtocol", () => {
 				supportsNativeTools: true, // Model supports native but user wants XML
 				defaultToolProtocol: "native",
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "openai-native")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // User preference wins
 		})
 
@@ -448,11 +298,11 @@ describe("resolveToolProtocol", () => {
 				supportsPromptCache: false,
 				supportsNativeTools: false, // Model doesn't support native
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "anthropic")
+			const result = resolveToolProtocol(settings, modelInfo)
 			expect(result).toBe(TOOL_PROTOCOL.XML) // Falls back to XML due to lack of support
 		})
 
-		it("should use model default for Roo provider with mixed-protocol model", () => {
+		it("should use model default when available", () => {
 			const settings: ProviderSettings = {
 				apiProvider: "roo",
 			}
@@ -460,11 +310,11 @@ describe("resolveToolProtocol", () => {
 				maxTokens: 8192,
 				contextWindow: 200000,
 				supportsPromptCache: true,
-				defaultToolProtocol: "xml", // Anthropic model via Roo
-				supportsNativeTools: false,
+				defaultToolProtocol: "xml",
+				supportsNativeTools: true,
 			}
-			const result = resolveToolProtocol(settings, modelInfo, "roo")
-			expect(result).toBe(TOOL_PROTOCOL.XML) // Model default wins over provider default
+			const result = resolveToolProtocol(settings, modelInfo)
+			expect(result).toBe(TOOL_PROTOCOL.XML) // Model default wins
 		})
 	})
 })

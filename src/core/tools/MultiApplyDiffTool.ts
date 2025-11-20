@@ -62,24 +62,21 @@ export async function applyDiffTool(
 	removeClosingTag: RemoveClosingTag,
 ) {
 	// Check if native protocol is enabled - if so, always use single-file class-based tool
-	const toolProtocol = resolveToolProtocol(
-		cline.apiConfiguration,
-		cline.api.getModel().info,
-		cline.apiConfiguration.apiProvider,
-	)
+	const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info)
 	if (isNativeProtocol(toolProtocol)) {
 		return applyDiffToolClass.handle(cline, block as ToolUse<"apply_diff">, {
 			askApproval,
 			handleError,
 			pushToolResult,
 			removeClosingTag,
+			toolProtocol,
 		})
 	}
 
 	// Check if MULTI_FILE_APPLY_DIFF experiment is enabled
 	const provider = cline.providerRef.deref()
-	if (provider) {
-		const state = await provider.getState()
+	const state = await provider?.getState()
+	if (provider && state) {
 		const isMultiFileApplyDiffEnabled = experiments.isEnabled(
 			state.experiments ?? {},
 			EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF,
@@ -92,6 +89,7 @@ export async function applyDiffTool(
 				handleError,
 				pushToolResult,
 				removeClosingTag,
+				toolProtocol,
 			})
 		}
 	}
@@ -270,7 +268,7 @@ Original error: ${errorMessage}`
 				await cline.say("rooignore_error", relPath)
 				updateOperationResult(relPath, {
 					status: "blocked",
-					error: formatResponse.rooIgnoreError(relPath),
+					error: formatResponse.rooIgnoreError(relPath, undefined),
 				})
 				continue
 			}
@@ -738,9 +736,16 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 			}
 		}
 
+		// Check protocol for notice formatting
+		const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info)
 		const singleBlockNotice =
 			totalSearchBlocks === 1
-				? "\n<notice>Making multiple related changes in a single apply_diff is more efficient. If other changes are needed in this file, please include them as additional SEARCH/REPLACE blocks.</notice>"
+				? isNativeProtocol(toolProtocol)
+					? "\n" +
+						JSON.stringify({
+							notice: "Making multiple related changes in a single apply_diff is more efficient. If other changes are needed in this file, please include them as additional SEARCH/REPLACE blocks.",
+						})
+					: "\n<notice>Making multiple related changes in a single apply_diff is more efficient. If other changes are needed in this file, please include them as additional SEARCH/REPLACE blocks.</notice>"
 				: ""
 
 		// Push the final result combining all operation results
