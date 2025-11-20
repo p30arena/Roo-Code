@@ -83,7 +83,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -109,7 +108,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -139,7 +137,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -179,7 +176,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -222,7 +218,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -266,7 +261,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -309,7 +303,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -353,7 +346,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 
@@ -397,7 +389,6 @@ describe("attemptCompletionTool", () => {
 				removeClosingTag: mockRemoveClosingTag,
 				askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
 				toolDescription: mockToolDescription,
-				toolProtocol: "xml",
 			}
 			await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
 

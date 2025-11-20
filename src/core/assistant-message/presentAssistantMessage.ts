@@ -13,7 +13,7 @@ import { fetchInstructionsTool } from "../tools/FetchInstructionsTool"
 import { listFilesTool } from "../tools/ListFilesTool"
 import { readFileTool } from "../tools/ReadFileTool"
 import { getSimpleReadFileToolDescription, simpleReadFileTool } from "../tools/simpleReadFileTool"
-import { shouldUseSingleFileRead, TOOL_PROTOCOL } from "@roo-code/types"
+import { shouldUseSingleFileRead } from "@roo-code/types"
 import { writeToFileTool } from "../tools/WriteToFileTool"
 import { applyDiffTool } from "../tools/MultiApplyDiffTool"
 import { insertContentTool } from "../tools/InsertContentTool"
@@ -70,8 +70,6 @@ export async function presentAssistantMessage(cline: Task) {
 
 	cline.presentAssistantMessageLocked = true
 	cline.presentAssistantMessageHasPendingUpdates = false
-
-	const cachedModelId = cline.api.getModel().id
 
 	if (cline.currentStreamingContentIndex >= cline.assistantMessageContent.length) {
 		// This may happen if the last content block was completed before
@@ -176,7 +174,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name} for '${block.params.command}']`
 					case "read_file":
 						// Check if this model should use the simplified description
-						if (shouldUseSingleFileRead(cachedModelId)) {
+						const modelId = cline.api.getModel().id
+						if (shouldUseSingleFileRead(modelId)) {
 							return getSimpleReadFileToolDescription(block.name, block.params)
 						} else {
 							// Prefer native typed args when available; fall back to legacy params
@@ -281,14 +280,19 @@ export async function presentAssistantMessage(cline: Task) {
 			// Track if we've already pushed a tool result for this tool call (native protocol only)
 			let hasToolResult = false
 
-			// Determine protocol by checking if this tool call has an ID.
-			// Native protocol tool calls ALWAYS have an ID (set when parsed from tool_call chunks).
-			// XML protocol tool calls NEVER have an ID (parsed from XML text).
-			const toolCallId = (block as any).id
-			const toolProtocol = toolCallId ? TOOL_PROTOCOL.NATIVE : TOOL_PROTOCOL.XML
-
 			const pushToolResult = (content: ToolResponse) => {
-				if (toolProtocol === TOOL_PROTOCOL.NATIVE) {
+				// Check if we're using native tool protocol
+				const toolProtocol = resolveToolProtocol(
+					cline.apiConfiguration,
+					cline.api.getModel().info,
+					cline.apiConfiguration.apiProvider,
+				)
+				const isNative = isNativeProtocol(toolProtocol)
+
+				// Get the tool call ID if this is a native tool call
+				const toolCallId = (block as any).id
+
+				if (isNative && toolCallId) {
 					// For native protocol, only allow ONE tool_result per tool call
 					if (hasToolResult) {
 						console.warn(
@@ -297,35 +301,30 @@ export async function presentAssistantMessage(cline: Task) {
 						return
 					}
 
-					// For native protocol, tool_result content must be a string
-					// Images are added as separate blocks in the user message
+					// For native protocol, add as tool_result block
 					let resultContent: string
-					let imageBlocks: Anthropic.ImageBlockParam[] = []
-
 					if (typeof content === "string") {
 						resultContent = content || "(tool did not return anything)"
 					} else {
-						// Separate text and image blocks
-						const textBlocks = content.filter((item) => item.type === "text")
-						imageBlocks = content.filter((item) => item.type === "image") as Anthropic.ImageBlockParam[]
-
-						// Convert text blocks to string for tool_result
-						resultContent =
-							textBlocks.map((item) => (item as Anthropic.TextBlockParam).text).join("\n") ||
-							"(tool did not return anything)"
+						// Convert array of content blocks to string for tool result
+						// Tool results in OpenAI format only support strings
+						resultContent = content
+							.map((item) => {
+								if (item.type === "text") {
+									return item.text
+								} else if (item.type === "image") {
+									return "(image content)"
+								}
+								return ""
+							})
+							.join("\n")
 					}
 
-					// Add tool_result with text content only
 					cline.userMessageContent.push({
 						type: "tool_result",
 						tool_use_id: toolCallId,
 						content: resultContent,
 					} as Anthropic.ToolResultBlockParam)
-
-					// Add image blocks separately after tool_result
-					if (imageBlocks.length > 0) {
-						cline.userMessageContent.push(...imageBlocks)
-					}
 
 					hasToolResult = true
 				} else {
@@ -366,14 +365,9 @@ export async function presentAssistantMessage(cline: Task) {
 					// Handle both messageResponse and noButtonClicked with text.
 					if (text) {
 						await cline.say("user_feedback", text, images)
-						pushToolResult(
-							formatResponse.toolResult(
-								formatResponse.toolDeniedWithFeedback(text, toolProtocol),
-								images,
-							),
-						)
+						pushToolResult(formatResponse.toolResult(formatResponse.toolDeniedWithFeedback(text), images))
 					} else {
-						pushToolResult(formatResponse.toolDenied(toolProtocol))
+						pushToolResult(formatResponse.toolDenied())
 					}
 					cline.didRejectTool = true
 					return false
@@ -382,9 +376,7 @@ export async function presentAssistantMessage(cline: Task) {
 				// Handle yesButtonClicked with text.
 				if (text) {
 					await cline.say("user_feedback", text, images)
-					pushToolResult(
-						formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text, toolProtocol), images),
-					)
+					pushToolResult(formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text), images))
 				}
 
 				return true
@@ -407,7 +399,7 @@ export async function presentAssistantMessage(cline: Task) {
 					`Error ${action}:\n${error.message ?? JSON.stringify(serializeError(error), null, 2)}`,
 				)
 
-				pushToolResult(formatResponse.toolError(errorString, toolProtocol))
+				pushToolResult(formatResponse.toolError(errorString))
 			}
 
 			// If block is partial, remove partial closing tag so its not
@@ -443,7 +435,7 @@ export async function presentAssistantMessage(cline: Task) {
 
 			if (!block.partial) {
 				cline.recordToolUsage(block.name)
-				TelemetryService.instance.captureToolUsage(cline.taskId, block.name, toolProtocol)
+				TelemetryService.instance.captureToolUsage(cline.taskId, block.name)
 			}
 
 			// Validate tool use before execution.
@@ -459,7 +451,7 @@ export async function presentAssistantMessage(cline: Task) {
 				)
 			} catch (error) {
 				cline.consecutiveMistakeCount++
-				pushToolResult(formatResponse.toolError(error.message, toolProtocol))
+				pushToolResult(formatResponse.toolError(error.message))
 				break
 			}
 
@@ -498,7 +490,6 @@ export async function presentAssistantMessage(cline: Task) {
 					pushToolResult(
 						formatResponse.toolError(
 							`Tool call repetition limit reached for ${block.name}. Please try a different approach.`,
-							toolProtocol,
 						),
 					)
 					break
@@ -513,7 +504,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "update_todo_list":
@@ -522,21 +512,23 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "apply_diff": {
 					await checkpointSaveAndMark(cline)
 
-					// Check if this tool call came from native protocol by checking for ID
-					// Native calls always have IDs, XML calls never do
-					if (toolProtocol === TOOL_PROTOCOL.NATIVE) {
+					// Check if native protocol is enabled - if so, always use single-file class-based tool
+					const applyDiffToolProtocol = resolveToolProtocol(
+						cline.apiConfiguration,
+						cline.api.getModel().info,
+						cline.apiConfiguration.apiProvider,
+					)
+					if (isNativeProtocol(applyDiffToolProtocol)) {
 						await applyDiffToolClass.handle(cline, block as ToolUse<"apply_diff">, {
 							askApproval,
 							handleError,
 							pushToolResult,
 							removeClosingTag,
-							toolProtocol,
 						})
 						break
 					}
@@ -561,7 +553,6 @@ export async function presentAssistantMessage(cline: Task) {
 							handleError,
 							pushToolResult,
 							removeClosingTag,
-							toolProtocol,
 						})
 					}
 					break
@@ -573,12 +564,12 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "read_file":
 					// Check if this model should use the simplified single-file read tool
-					if (shouldUseSingleFileRead(cachedModelId)) {
+					const modelId = cline.api.getModel().id
+					if (shouldUseSingleFileRead(modelId)) {
 						await simpleReadFileTool(
 							cline,
 							block,
@@ -586,7 +577,6 @@ export async function presentAssistantMessage(cline: Task) {
 							handleError,
 							pushToolResult,
 							removeClosingTag,
-							toolProtocol,
 						)
 					} else {
 						// Type assertion is safe here because we're in the "read_file" case
@@ -595,7 +585,6 @@ export async function presentAssistantMessage(cline: Task) {
 							handleError,
 							pushToolResult,
 							removeClosingTag,
-							toolProtocol,
 						})
 					}
 					break
@@ -605,7 +594,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "list_files":
@@ -614,7 +602,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "codebase_search":
@@ -623,7 +610,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "list_code_definition_names":
@@ -632,7 +618,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "search_files":
@@ -641,7 +626,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "browser_action":
@@ -650,7 +634,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "execute_command":
@@ -659,7 +642,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "use_mcp_tool":
@@ -668,7 +650,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "access_mcp_resource":
@@ -687,7 +668,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "switch_mode":
@@ -696,7 +676,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "new_task":
@@ -705,7 +684,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "attempt_completion": {
@@ -716,7 +694,6 @@ export async function presentAssistantMessage(cline: Task) {
 						removeClosingTag,
 						askFinishSubTaskApproval,
 						toolDescription,
-						toolProtocol,
 					}
 					await attemptCompletionTool.handle(
 						cline,
@@ -731,7 +708,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 				case "generate_image":
@@ -741,7 +717,6 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
-						toolProtocol,
 					})
 					break
 			}

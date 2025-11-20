@@ -95,7 +95,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const ark = modelUrl.includes(".volces.com")
 
 		if (modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")) {
-			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages, metadata)
+			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages)
 			return
 		}
 
@@ -164,8 +164,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				...(reasoning && reasoning),
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 			}
 
 			// Add max_tokens if needed
@@ -191,11 +189,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
-			const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices?.[0]?.delta ?? {}
-				const finishReason = chunk.choices?.[0]?.finish_reason
 
 				if (delta.content) {
 					for (const chunk of matcher.update(delta.content)) {
@@ -209,38 +205,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						text: (delta.reasoning_content as string | undefined) || "",
 					}
 				}
-
-				if (delta.tool_calls) {
-					for (const toolCall of delta.tool_calls) {
-						const index = toolCall.index
-						const existing = toolCallAccumulator.get(index)
-
-						if (existing) {
-							if (toolCall.function?.arguments) {
-								existing.arguments += toolCall.function.arguments
-							}
-						} else {
-							toolCallAccumulator.set(index, {
-								id: toolCall.id || "",
-								name: toolCall.function?.name || "",
-								arguments: toolCall.function?.arguments || "",
-							})
-						}
-					}
-				}
-
-				if (finishReason === "tool_calls") {
-					for (const toolCall of toolCallAccumulator.values()) {
-						yield {
-							type: "tool_call",
-							id: toolCall.id,
-							name: toolCall.name,
-							arguments: toolCall.arguments,
-						}
-					}
-					toolCallAccumulator.clear()
-				}
-
 				if (chunk.usage) {
 					lastUsage = chunk.usage
 				}
@@ -261,8 +225,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					: enabledLegacyFormat
 						? [systemMessage, ...convertToSimpleMessages(messages)]
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 			}
 
 			// Add max_tokens if needed
@@ -278,24 +240,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			const message = response.choices?.[0]?.message
-
-			if (message?.tool_calls) {
-				for (const toolCall of message.tool_calls) {
-					if (toolCall.type === "function") {
-						yield {
-							type: "tool_call",
-							id: toolCall.id,
-							name: toolCall.function.name,
-							arguments: toolCall.function.arguments,
-						}
-					}
-				}
-			}
-
 			yield {
 				type: "text",
-				text: message?.content || "",
+				text: response.choices?.[0]?.message.content || "",
 			}
 
 			yield this.processUsageMetrics(response.usage, modelInfo)
@@ -357,7 +304,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		modelId: string,
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const modelInfo = this.getModel().info
 		const methodIsAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
@@ -378,8 +324,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -410,8 +354,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				],
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -429,73 +371,22 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			const message = response.choices?.[0]?.message
-			if (message?.tool_calls) {
-				for (const toolCall of message.tool_calls) {
-					if (toolCall.type === "function") {
-						yield {
-							type: "tool_call",
-							id: toolCall.id,
-							name: toolCall.function.name,
-							arguments: toolCall.function.arguments,
-						}
-					}
-				}
-			}
-
 			yield {
 				type: "text",
-				text: message?.content || "",
+				text: response.choices?.[0]?.message.content || "",
 			}
 			yield this.processUsageMetrics(response.usage)
 		}
 	}
 
 	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
-		const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
-
 		for await (const chunk of stream) {
 			const delta = chunk.choices?.[0]?.delta
-			const finishReason = chunk.choices?.[0]?.finish_reason
-
-			if (delta) {
-				if (delta.content) {
-					yield {
-						type: "text",
-						text: delta.content,
-					}
+			if (delta?.content) {
+				yield {
+					type: "text",
+					text: delta.content,
 				}
-
-				if (delta.tool_calls) {
-					for (const toolCall of delta.tool_calls) {
-						const index = toolCall.index
-						const existing = toolCallAccumulator.get(index)
-
-						if (existing) {
-							if (toolCall.function?.arguments) {
-								existing.arguments += toolCall.function.arguments
-							}
-						} else {
-							toolCallAccumulator.set(index, {
-								id: toolCall.id || "",
-								name: toolCall.function?.name || "",
-								arguments: toolCall.function?.arguments || "",
-							})
-						}
-					}
-				}
-			}
-
-			if (finishReason === "tool_calls") {
-				for (const toolCall of toolCallAccumulator.values()) {
-					yield {
-						type: "tool_call",
-						id: toolCall.id,
-						name: toolCall.name,
-						arguments: toolCall.arguments,
-					}
-				}
-				toolCallAccumulator.clear()
 			}
 
 			if (chunk.usage) {

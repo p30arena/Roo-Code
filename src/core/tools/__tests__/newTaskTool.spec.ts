@@ -140,7 +140,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		// Verify askApproval was called
@@ -177,7 +176,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		expect(mockStartSubtask).toHaveBeenCalledWith(
@@ -204,7 +202,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		expect(mockStartSubtask).toHaveBeenCalledWith(
@@ -231,7 +228,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		expect(mockStartSubtask).toHaveBeenCalledWith(
@@ -258,7 +254,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		// Should NOT error when todos is missing
@@ -290,7 +285,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		// Should parse and include todos when provided
@@ -323,7 +317,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		expect(mockSayAndCreateMissingParamError).toHaveBeenCalledWith("new_task", "mode")
@@ -348,7 +341,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		expect(mockSayAndCreateMissingParamError).toHaveBeenCalledWith("new_task", "message")
@@ -373,7 +365,6 @@ describe("newTaskTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		expect(mockStartSubtask).toHaveBeenCalledWith(
@@ -411,7 +402,6 @@ describe("newTaskTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should NOT error when todos is missing and setting is disabled
@@ -449,7 +439,6 @@ describe("newTaskTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should error when todos is missing and setting is enabled
@@ -487,7 +476,6 @@ describe("newTaskTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should NOT error when todos is provided and setting is enabled
@@ -531,7 +519,6 @@ describe("newTaskTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should NOT error when todos is empty string and setting is enabled
@@ -567,7 +554,6 @@ describe("newTaskTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Verify that VSCode configuration was accessed with Package.name
@@ -602,7 +588,6 @@ describe("newTaskTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Assert: configuration was read using the dynamic nightly namespace

@@ -23,7 +23,7 @@ export class UpdateTodoListTool extends BaseTool<"update_todo_list"> {
 	}
 
 	async execute(params: UpdateTodoListParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { pushToolResult, handleError, askApproval, toolProtocol } = callbacks
+		const { pushToolResult, handleError, askApproval } = callbacks
 
 		try {
 			const todosRaw = params.todos

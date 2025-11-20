@@ -42,7 +42,6 @@ type BaseModelParams = {
 	reasoningEffort: ReasoningEffortExtended | undefined
 	reasoningBudget: number | undefined
 	verbosity: VerbosityLevel | undefined
-	tools?: boolean
 }
 
 type AnthropicModelParams = {
@@ -130,15 +129,16 @@ export function getModelParams({
 		temperature = 1.0
 	} else if (shouldUseReasoningEffort({ model, settings })) {
 		// "Traditional" reasoning models use the `reasoningEffort` parameter.
-		const effort = (customReasoningEffort ?? model.reasoningEffort) as
-			| ReasoningEffortExtended
-			| "disable"
-			| undefined
-		// Capability and settings checks are handled by shouldUseReasoningEffort.
-		// Here we simply propagate the resolved effort into the params, while
-		// still treating "disable" as an omission.
+		const effort = (customReasoningEffort ?? model.reasoningEffort) as any
+		// Do not propagate "disable" into model params; treat as omission
 		if (effort && effort !== "disable") {
-			reasoningEffort = effort as ReasoningEffortExtended
+			if (model.supportsReasoningEffort === true) {
+				// Boolean capability: accept extended efforts; UI still exposes low/medium/high by default
+				reasoningEffort = effort as ReasoningEffortExtended
+			} else {
+				// Array capability: honor exactly what's defined by the model
+				reasoningEffort = effort as ReasoningEffortExtended
+			}
 		}
 	}
 
@@ -161,7 +161,6 @@ export function getModelParams({
 			format,
 			...params,
 			reasoning: getOpenAiReasoning({ model, reasoningBudget, reasoningEffort, settings }),
-			tools: model.supportsNativeTools,
 		}
 	} else if (format === "gemini") {
 		return {

@@ -161,7 +161,6 @@ describe("insertContentTool", () => {
 				toolResult = result
 			},
 			removeClosingTag: mockRemoveClosingTag,
-			toolProtocol: "xml",
 		})
 
 		return toolResult

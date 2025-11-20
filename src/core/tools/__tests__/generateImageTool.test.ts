@@ -87,7 +87,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should not process anything when partial
@@ -113,7 +112,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should not process anything when partial
@@ -152,7 +150,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Should process the complete block
@@ -194,7 +191,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			// Check that cline.say was called with image data containing cache-busting parameter
@@ -231,7 +227,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.consecutiveMistakeCount).toBe(1)
@@ -255,7 +250,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.consecutiveMistakeCount).toBe(1)
@@ -289,7 +283,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockPushToolResult).toHaveBeenCalledWith(
@@ -320,7 +313,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("Input image not found"))
@@ -344,7 +336,6 @@ describe("generateImageTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
-				toolProtocol: "xml",
 			})
 
 			expect(mockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("Unsupported image format"))

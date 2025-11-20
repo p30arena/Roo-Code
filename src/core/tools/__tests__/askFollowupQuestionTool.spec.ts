@@ -36,7 +36,6 @@ describe("askFollowupQuestionTool", () => {
 			handleError: vi.fn(),
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: vi.fn((tag, content) => content),
-			toolProtocol: "xml",
 		})
 
 		expect(mockCline.ask).toHaveBeenCalledWith(
@@ -62,7 +61,6 @@ describe("askFollowupQuestionTool", () => {
 			handleError: vi.fn(),
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: vi.fn((tag, content) => content),
-			toolProtocol: "xml",
 		})
 
 		expect(mockCline.ask).toHaveBeenCalledWith(
@@ -90,7 +88,6 @@ describe("askFollowupQuestionTool", () => {
 			handleError: vi.fn(),
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: vi.fn((tag, content) => content),
-			toolProtocol: "xml",
 		})
 
 		expect(mockCline.ask).toHaveBeenCalledWith(

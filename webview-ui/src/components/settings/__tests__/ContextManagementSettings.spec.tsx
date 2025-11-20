@@ -19,12 +19,10 @@ vi.mock("@/hooks/useAppTranslation", () => ({
 // Mock the UI components
 vi.mock("@/components/ui", () => ({
 	...vi.importActual("@/components/ui"),
-	Slider: ({ value, onValueChange, "data-testid": dataTestId, disabled, min, max }: any) => (
+	Slider: ({ value, onValueChange, "data-testid": dataTestId, disabled }: any) => (
 		<input
 			type="range"
 			value={value?.[0] ?? 0}
-			min={min}
-			max={max}
 			onChange={(e) => onValueChange([parseFloat(e.target.value)])}
 			onKeyDown={(e) => {
 				const currentValue = value?.[0] ?? 0
@@ -457,20 +455,13 @@ describe("ContextManagementSettings", () => {
 			...defaultProps,
 			maxOpenTabsContext: 0,
 			maxWorkspaceFiles: 500,
-			maxGitStatusFiles: 0,
 			setCachedStateField: mockSetCachedStateField,
 		}
 		render(<ContextManagementSettings {...props} />)
 
-		// Check boundary values are displayed by checking the slider values directly
-		const openTabsSlider = screen.getByTestId("open-tabs-limit-slider")
-		expect(openTabsSlider).toHaveValue("0")
-
-		const workspaceFilesSlider = screen.getByTestId("workspace-files-limit-slider")
-		expect(workspaceFilesSlider).toHaveValue("500")
-
-		const gitStatusSlider = screen.getByTestId("max-git-status-files-slider")
-		expect(gitStatusSlider).toHaveValue("0")
+		// Check boundary values are displayed
+		expect(screen.getByText("0")).toBeInTheDocument() // min open tabs
+		expect(screen.getByText("500")).toBeInTheDocument() // max workspace files
 	})
 
 	it("handles undefined optional props gracefully", () => {

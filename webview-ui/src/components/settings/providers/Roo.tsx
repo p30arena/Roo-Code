@@ -30,10 +30,8 @@ export const Roo = ({
 	return (
 		<>
 			{cloudIsAuthenticated ? (
-				<div className="flex justify-between items-center mb-2">
-					<div className="text-sm text-vscode-descriptionForeground">
-						{t("settings:providers.roo.authenticatedMessage")}
-					</div>
+				<div className="text-sm text-vscode-descriptionForeground">
+					{t("settings:providers.roo.authenticatedMessage")}
 				</div>
 			) : (
 				<div className="flex flex-col gap-2">
