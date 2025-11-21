@@ -196,6 +196,15 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			include?: string[]
 			/** Prompt cache retention policy: "in_memory" (default) or "24h" for extended caching */
 			prompt_cache_retention?: "in_memory" | "24h"
+			tools?: Array<{
+				type: "function"
+				name: string
+				description?: string
+				parameters?: any
+				strict?: boolean
+			}>
+			tool_choice?: any
+			parallel_tool_calls?: boolean
 		}
 
 		// Validate requested tier against model support; if not supported, omit.
@@ -240,6 +249,12 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Enable extended prompt cache retention for models that support it.
 			// This uses the OpenAI Responses API `prompt_cache_retention` parameter.
 			...(promptCacheRetention ? { prompt_cache_retention: promptCacheRetention } : {}),
+		}
+
+		// For native tool protocol, explicitly disable parallel tool calls.
+		// For XML or when protocol is unset, omit the field entirely so the API default applies.
+		if (metadata?.toolProtocol === "native") {
+			body.parallel_tool_calls = false
 		}
 
 		// Include text.verbosity only when the model explicitly supports it
