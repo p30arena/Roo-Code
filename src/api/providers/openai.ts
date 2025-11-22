@@ -189,6 +189,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
+			const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices?.[0]?.delta ?? {}
@@ -394,6 +395,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
+		const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
+
 		for await (const chunk of stream) {
 			const delta = chunk.choices?.[0]?.delta
 			if (delta?.content) {
