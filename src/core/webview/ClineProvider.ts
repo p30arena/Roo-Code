@@ -151,7 +151,7 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "nov-2025-v3.30.0-pr-fixer" // v3.30.0 PR Fixer announcement
+	public readonly latestAnnouncementId = "nov-2025-v3.34.0-browser-use-2-cloud-paid" // v3.34.0 Browser Use 2.0 & Cloud Paid Models announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -1924,6 +1924,7 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			isBrowserSessionActive,
 		} = await this.getState()
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
@@ -1973,6 +1974,7 @@ export class ClineProvider
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? false,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? false,
 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? false,
+			isBrowserSessionActive,
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext: autoCondenseContext ?? true,
@@ -2185,6 +2187,9 @@ export class ClineProvider
 			)
 		}
 
+		// Get actual browser session state
+		const isBrowserSessionActive = this.getCurrentTask()?.browserSession?.isSessionActive() ?? false
+
 		// Return the same structure as before.
 		return {
 			apiConfiguration: providerSettings,
@@ -2203,6 +2208,7 @@ export class ClineProvider
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? false,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
 			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? false,
+			isBrowserSessionActive,
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: stateValues.diagnosticsEnabled ?? true,
 			allowedMaxRequests: stateValues.allowedMaxRequests,
@@ -2724,6 +2730,10 @@ export class ClineProvider
 
 		// Capture the current instance to detect if rehydrate already occurred elsewhere
 		const originalInstanceId = task.instanceId
+
+		// Immediately cancel the underlying HTTP request if one is in progress
+		// This ensures the stream fails quickly rather than waiting for network timeout
+		task.cancelCurrentRequest()
 
 		// Begin abort (non-blocking)
 		task.abortTask()

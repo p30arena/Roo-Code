@@ -292,10 +292,12 @@
 			"goToSettingsButton": "前往设置"
 		},
 		"release": {
-			"heading": "扩展新功能：",
 			"openRouterEmbeddings": "支持 OpenRouter 嵌入模型",
 			"chutesDynamic": "Chutes 现在动态加载最新模型",
-			"queuedMessagesFix": "修复队列消息丢失问题"
+			"queuedMessagesFix": "修复队列消息丢失问题",
+			"heading": "最新功能：",
+			"browserUse": "Browser Use 2.0 升级了聊天内浏览体验，支持持久会话、更清晰的反馈、专用浏览器面板以及更自然的操作描述",
+			"cloudPaid": "Roo Code Cloud 现已提供付费模型：购买积分即可同时用于云端智能体和推理服务"
 		},
 		"cloudAgents": {
 			"heading": "云端新功能：",
@@ -307,6 +309,7 @@
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们 🚀"
 	},
 	"browser": {
+		"session": "浏览器会话",
 		"rooWantsToUse": "Roo想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
@@ -323,8 +326,10 @@
 			"launch": "访问 {{url}}",
 			"click": "点击 ({{coordinate}})",
 			"type": "输入 \"{{text}}\"",
+			"press": "按 {{key}}",
 			"scrollDown": "向下滚动",
 			"scrollUp": "向上滚动",
+			"hover": "悬停 ({{coordinate}})",
 			"close": "关闭浏览器"
 		}
 	},
@@ -424,7 +429,6 @@
 		"wantsToRun": "Roo 想要运行斜杠命令",
 		"didRun": "Roo 运行了斜杠命令"
 	},
-	"docs": "Check our <DocsLink>docs</DocsLink> to learn more.",
 	"todo": {
 		"partial": "已完成 {{completed}} / {{total}} 个待办事项",
 		"complete": "已完成 {{total}} 个待办事项",

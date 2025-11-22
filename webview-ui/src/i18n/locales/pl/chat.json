@@ -291,10 +291,12 @@
 			"goToSettingsButton": "Przejdź do Ustawień"
 		},
 		"release": {
-			"heading": "Nowości w rozszerzeniu:",
 			"openRouterEmbeddings": "Wsparcie dla modeli osadzania OpenRouter",
 			"chutesDynamic": "Chutes teraz dynamicznie ładuje najnowsze modele",
-			"queuedMessagesFix": "Poprawki dla gubienia się wiadomości w kolejce"
+			"queuedMessagesFix": "Poprawki dla gubienia się wiadomości w kolejce",
+			"heading": "Nowości:",
+			"browserUse": "Browser Use 2.0 ulepsza przeglądanie w czacie dzięki trwałym sesjom, jaśniejszym informacjom zwrotnym, dedykowanemu panelowi przeglądarki i bardziej naturalnemu opisowi działań",
+			"cloudPaid": "Dostawca Roo Code Cloud oferuje teraz płatne modele: kup kredyty i używaj ich zarówno dla agentów chmurowych, jak i wnioskowania"
 		},
 		"cloudAgents": {
 			"heading": "Nowości w chmurze:",
@@ -306,6 +308,7 @@
 		"socialLinks": "Dołącz do nas na <xLink>X</xLink>, <discordLink>Discord</discordLink>, lub <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Sesja przeglądarki",
 		"rooWantsToUse": "Roo chce użyć przeglądarki",
 		"consoleLogs": "Logi konsoli",
 		"noNewLogs": "(Brak nowych logów)",
@@ -322,8 +325,10 @@
 			"launch": "Uruchom przeglądarkę na {{url}}",
 			"click": "Kliknij ({{coordinate}})",
 			"type": "Wpisz \"{{text}}\"",
+			"press": "Naciśnij {{key}}",
 			"scrollDown": "Przewiń w dół",
 			"scrollUp": "Przewiń w górę",
+			"hover": "Najedź ({{coordinate}})",
 			"close": "Zamknij przeglądarkę"
 		}
 	},
@@ -423,7 +428,6 @@
 		"wantsToRun": "Roo chce uruchomić komendę slash",
 		"didRun": "Roo uruchomił komendę slash"
 	},
-	"docs": "Check our <DocsLink>docs</DocsLink> to learn more.",
 	"todo": {
 		"partial": "Ukończono {{completed}} z {{total}} zadań do wykonania",
 		"complete": "Ukończono {{total}} zadań do wykonania",
