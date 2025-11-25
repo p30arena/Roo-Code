@@ -49,6 +49,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		"response.output_item.added",
 		"response.done",
 		"response.completed",
+		"response.tool_call_arguments.delta",
+		"response.function_call_arguments.delta",
+		"response.tool_call_arguments.done",
+		"response.function_call_arguments.done",
 	])
 
 	constructor(options: ApiHandlerOptions) {
@@ -179,6 +183,38 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		reasoningEffort: ReasoningEffortExtended | undefined,
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): any {
+		// Ensure all properties are in the required array for OpenAI's strict mode
+		// This recursively processes nested objects and array items
+		const ensureAllRequired = (schema: any): any => {
+			if (!schema || typeof schema !== "object" || schema.type !== "object") {
+				return schema
+			}
+
+			const result = { ...schema }
+
+			if (result.properties) {
+				const allKeys = Object.keys(result.properties)
+				result.required = allKeys
+
+				// Recursively process nested objects
+				const newProps = { ...result.properties }
+				for (const key of allKeys) {
+					const prop = newProps[key]
+					if (prop.type === "object") {
+						newProps[key] = ensureAllRequired(prop)
+					} else if (prop.type === "array" && prop.items?.type === "object") {
+						newProps[key] = {
+							...prop,
+							items: ensureAllRequired(prop.items),
+						}
+					}
+				}
+				result.properties = newProps
+			}
+
+			return result
+		}
+
 		// Build a request body for the OpenAI Responses API.
 		// Ensure we explicitly pass max_output_tokens based on Roo's reserved model response calculation
 		// so requests do not default to very large limits (e.g., 120k).
@@ -249,6 +285,18 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Enable extended prompt cache retention for models that support it.
 			// This uses the OpenAI Responses API `prompt_cache_retention` parameter.
 			...(promptCacheRetention ? { prompt_cache_retention: promptCacheRetention } : {}),
+			...(metadata?.tools && {
+				tools: metadata.tools
+					.filter((tool) => tool.type === "function")
+					.map((tool) => ({
+						type: "function",
+						name: tool.function.name,
+						description: tool.function.description,
+						parameters: ensureAllRequired(tool.function.parameters),
+						strict: true,
+					})),
+			}),
+			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 		}
 
 		// For native tool protocol, explicitly disable parallel tool calls.
@@ -307,9 +355,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 	private formatFullConversation(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): any {
 		// Format the entire conversation history for the Responses API using structured format
-		// This supports both text and images
-		// Messages already include reasoning items from API history, so we just need to format them
-		const formattedMessages: any[] = []
+		// The Responses API (like Realtime API) accepts a list of items, which can be messages, function calls, or function call outputs.
+		const formattedInput: any[] = []
 
 		// Do NOT embed the system prompt as a developer message in the Responses API input.
 		// The Responses API treats roles as free-form; use the top-level `instructions` field instead.
@@ -319,45 +366,83 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Check if this is a reasoning item (already formatted in API history)
 			if ((message as any).type === "reasoning") {
 				// Pass through reasoning items as-is
-				formattedMessages.push(message)
+				formattedInput.push(message)
 				continue
 			}
 
-			const role = message.role === "user" ? "user" : "assistant"
-			const content: any[] = []
+			if (message.role === "user") {
+				const content: any[] = []
+				const toolResults: any[] = []
 
-			if (typeof message.content === "string") {
-				// For user messages, use input_text; for assistant messages, use output_text
-				if (role === "user") {
+				if (typeof message.content === "string") {
 					content.push({ type: "input_text", text: message.content })
-				} else {
-					content.push({ type: "output_text", text: message.content })
-				}
-			} else if (Array.isArray(message.content)) {
-				// For array content with potential images, format properly
-				for (const block of message.content) {
-					if (block.type === "text") {
-						// For user messages, use input_text; for assistant messages, use output_text
-						if (role === "user") {
-							content.push({ type: "input_text", text: (block as any).text })
-						} else {
-							content.push({ type: "output_text", text: (block as any).text })
+				} else if (Array.isArray(message.content)) {
+					for (const block of message.content) {
+						if (block.type === "text") {
+							content.push({ type: "input_text", text: block.text })
+						} else if (block.type === "image") {
+							const image = block as Anthropic.Messages.ImageBlockParam
+							const imageUrl = `data:${image.source.media_type};base64,${image.source.data}`
+							content.push({ type: "input_image", image_url: imageUrl })
+						} else if (block.type === "tool_result") {
+							// Map Anthropic tool_result to Responses API function_call_output item
+							const result =
+								typeof block.content === "string"
+									? block.content
+									: block.content?.map((c) => (c.type === "text" ? c.text : "")).join("") || ""
+							toolResults.push({
+								type: "function_call_output",
+								call_id: block.tool_use_id,
+								output: result,
+							})
 						}
-					} else if (block.type === "image") {
-						const image = block as Anthropic.Messages.ImageBlockParam
-						// Format image with proper data URL - images are always input_image
-						const imageUrl = `data:${image.source.media_type};base64,${image.source.data}`
-						content.push({ type: "input_image", image_url: imageUrl })
 					}
 				}
-			}
 
-			if (content.length > 0) {
-				formattedMessages.push({ role, content })
+				// Add user message first
+				if (content.length > 0) {
+					formattedInput.push({ role: "user", content })
+				}
+
+				// Add tool results as separate items
+				if (toolResults.length > 0) {
+					formattedInput.push(...toolResults)
+				}
+			} else if (message.role === "assistant") {
+				const content: any[] = []
+				const toolCalls: any[] = []
+
+				if (typeof message.content === "string") {
+					content.push({ type: "output_text", text: message.content })
+				} else if (Array.isArray(message.content)) {
+					for (const block of message.content) {
+						if (block.type === "text") {
+							content.push({ type: "output_text", text: block.text })
+						} else if (block.type === "tool_use") {
+							// Map Anthropic tool_use to Responses API function_call item
+							toolCalls.push({
+								type: "function_call",
+								call_id: block.id,
+								name: block.name,
+								arguments: JSON.stringify(block.input),
+							})
+						}
+					}
+				}
+
+				// Add assistant message if it has content
+				if (content.length > 0) {
+					formattedInput.push({ role: "assistant", content })
+				}
+
+				// Add tool calls as separate items
+				if (toolCalls.length > 0) {
+					formattedInput.push(...toolCalls)
+				}
 			}
 		}
 
-		return formattedMessages
+		return formattedInput
 	}
 
 	private async *makeResponsesApiRequest(
@@ -691,11 +776,16 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 								// Output item completed
 							}
 							// Handle function/tool call events
-							else if (parsed.type === "response.function_call_arguments.delta") {
-								// Function call arguments streaming
-								// We could yield this as a special type if needed for tool usage
-							} else if (parsed.type === "response.function_call_arguments.done") {
-								// Function call completed
+							else if (
+								parsed.type === "response.function_call_arguments.delta" ||
+								parsed.type === "response.tool_call_arguments.delta" ||
+								parsed.type === "response.function_call_arguments.done" ||
+								parsed.type === "response.tool_call_arguments.done"
+							) {
+								// Delegated to processEvent (handles accumulation and completion)
+								for await (const outChunk of this.processEvent(parsed, model)) {
+									yield outChunk
+								}
 							}
 							// Handle MCP (Model Context Protocol) tool events
 							else if (parsed.type === "response.mcp_call_arguments.delta") {
