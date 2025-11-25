@@ -189,7 +189,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
-			const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices?.[0]?.delta ?? {}
@@ -206,23 +205,22 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						text: (delta.reasoning_content as string | undefined) || "",
 					}
 				}
+
+				if (delta.tool_calls) {
+					for (const toolCall of delta.tool_calls) {
+						yield {
+							type: "tool_call_partial",
+							index: toolCall.index,
+							id: toolCall.id,
+							name: toolCall.function?.name,
+							arguments: toolCall.function?.arguments,
+						}
+					}
+				}
+
 				if (chunk.usage) {
 					lastUsage = chunk.usage
 				}
-			}
-
-			// Fallback: If stream ends with accumulated tool calls that weren't yielded
-			// (e.g., finish_reason was 'stop' or 'length' instead of 'tool_calls')
-			if (toolCallAccumulator.size > 0) {
-				for (const toolCall of toolCallAccumulator.values()) {
-					yield {
-						type: "tool_call",
-						id: toolCall.id,
-						name: toolCall.name,
-						arguments: toolCall.arguments,
-					}
-				}
-				toolCallAccumulator.clear()
 			}
 
 			for (const chunk of matcher.final()) {
@@ -395,14 +393,28 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
-		const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
-
 		for await (const chunk of stream) {
 			const delta = chunk.choices?.[0]?.delta
-			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+
+			if (delta) {
+				if (delta.content) {
+					yield {
+						type: "text",
+						text: delta.content,
+					}
+				}
+
+				// Emit raw tool call chunks - NativeToolCallParser handles state management
+				if (delta.tool_calls) {
+					for (const toolCall of delta.tool_calls) {
+						yield {
+							type: "tool_call_partial",
+							index: toolCall.index,
+							id: toolCall.id,
+							name: toolCall.function?.name,
+							arguments: toolCall.function?.arguments,
+						}
+					}
 				}
 			}
 
@@ -413,20 +425,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					outputTokens: chunk.usage.completion_tokens || 0,
 				}
 			}
-		}
-
-		// Fallback: If stream ends with accumulated tool calls that weren't yielded
-		// (e.g., finish_reason was 'stop' or 'length' instead of 'tool_calls')
-		if (toolCallAccumulator.size > 0) {
-			for (const toolCall of toolCallAccumulator.values()) {
-				yield {
-					type: "tool_call",
-					id: toolCall.id,
-					name: toolCall.name,
-					arguments: toolCall.arguments,
-				}
-			}
-			toolCallAccumulator.clear()
 		}
 	}
 

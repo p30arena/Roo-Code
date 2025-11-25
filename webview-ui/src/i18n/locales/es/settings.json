@@ -35,6 +35,26 @@
 		"language": "Idioma",
 		"about": "Acerca de Roo Code"
 	},
+	"about": {
+		"bugReport": {
+			"label": "¿Encontraste un error?",
+			"link": "Reportar en GitHub"
+		},
+		"featureRequest": {
+			"label": "¿Tienes una idea?",
+			"link": "Compártela con nosotros"
+		},
+		"securityIssue": {
+			"label": "¿Descubriste una vulnerabilidad?",
+			"link": "Sigue nuestro proceso de divulgación"
+		},
+		"contact": {
+			"label": "¿Necesitas hablar con nosotros? Escribe"
+		},
+		"community": "¿Quieres consejos o simplemente pasar el rato con otros usuarios de Roo Code? Únete a <redditLink>reddit.com/r/RooCode</redditLink> o <discordLink>discord.gg/roocode</discordLink>",
+		"contactAndCommunity": "Contacto y Comunidad",
+		"manageSettings": "Gestionar Configuración"
+	},
 	"slashCommands": {
 		"description": "Gestiona tus comandos de barra para ejecutar rápidamente flujos de trabajo y acciones personalizadas. <DocsLink>Saber más</DocsLink>"
 	},
@@ -63,6 +83,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clave de API de OpenRouter",
 		"openRouterApiKeyPlaceholder": "Introduce tu clave de API de OpenRouter",
+		"rooProvider": "Roo Code Cloud",
+		"rooCloudAuthNote": "Roo Code Cloud utiliza la autenticación de tu cuenta. Inicia sesión en Roo Code Cloud para usar este proveedor.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
@@ -776,6 +798,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Habilitar generación de imágenes con IA",
+			"providerLabel": "Proveedor",
+			"providerDescription": "Selecciona el proveedor para la generación de imágenes.",
 			"description": "Cuando esté habilitado, Roo puede generar imágenes a partir de prompts de texto usando los modelos de generación de imágenes de OpenRouter. Requiere que se configure una clave de API de OpenRouter.",
 			"openRouterApiKeyLabel": "Clave API de OpenRouter",
 			"openRouterApiKeyPlaceholder": "Introduce tu clave API de OpenRouter",

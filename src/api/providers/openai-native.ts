@@ -976,8 +976,37 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			return
 		}
 
-		// Handle output item additions (SDK or Responses API alternative format)
-		if (event?.type === "response.output_item.added") {
+		// Handle tool/function call deltas - emit as partial chunks
+		if (
+			event?.type === "response.tool_call_arguments.delta" ||
+			event?.type === "response.function_call_arguments.delta"
+		) {
+			// Emit partial chunks directly - NativeToolCallParser handles state management
+			const callId = event.call_id || event.tool_call_id || event.id
+			const name = event.name || event.function_name
+			const args = event.delta || event.arguments
+
+			yield {
+				type: "tool_call_partial",
+				index: event.index ?? 0,
+				id: callId,
+				name,
+				arguments: args,
+			}
+			return
+		}
+
+		// Handle tool/function call completion events
+		if (
+			event?.type === "response.tool_call_arguments.done" ||
+			event?.type === "response.function_call_arguments.done"
+		) {
+			// Tool call complete - no action needed, NativeToolCallParser handles completion
+			return
+		}
+
+		// Handle output item additions/completions (SDK or Responses API alternative format)
+		if (event?.type === "response.output_item.added" || event?.type === "response.output_item.done") {
 			const item = event?.item
 			if (item) {
 				if (item.type === "text" && item.text) {
@@ -989,6 +1018,22 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 						// Some implementations send 'text'; others send 'output_text'
 						if ((content?.type === "text" || content?.type === "output_text") && content?.text) {
 							yield { type: "text", text: content.text }
+						}
+					}
+				} else if (
+					(item.type === "function_call" || item.type === "tool_call") &&
+					event.type === "response.output_item.done" // Only handle done events for tool calls to ensure arguments are complete
+				) {
+					// Handle complete tool/function call item
+					// Emit as tool_call for backward compatibility with non-streaming tool handling
+					const callId = item.call_id || item.tool_call_id || item.id
+					if (callId) {
+						const args = item.arguments || item.function?.arguments || item.function_arguments
+						yield {
+							type: "tool_call",
+							id: callId,
+							name: item.name || item.function?.name || item.function_name || "",
+							arguments: typeof args === "string" ? args : "{}",
 						}
 					}
 				}

@@ -35,6 +35,26 @@
 		"language": "Sprache",
 		"about": "Über Roo Code"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Fehler gefunden?",
+			"link": "Auf GitHub melden"
+		},
+		"featureRequest": {
+			"label": "Hast du eine Idee?",
+			"link": "Teile sie mit uns"
+		},
+		"securityIssue": {
+			"label": "Sicherheitslücke entdeckt?",
+			"link": "Folge unserem Offenlegungsprozess"
+		},
+		"contact": {
+			"label": "Musst du mit uns sprechen? Schreibe"
+		},
+		"community": "Möchtest du Tipps oder dich einfach mit anderen Roo Code-Nutzern austauschen? Tritt <redditLink>reddit.com/r/RooCode</redditLink> oder <discordLink>discord.gg/roocode</discordLink> bei",
+		"contactAndCommunity": "Kontakt & Community",
+		"manageSettings": "Einstellungen verwalten"
+	},
 	"slashCommands": {
 		"description": "Verwalte deine Slash-Befehle, um benutzerdefinierte Workflows und Aktionen schnell auszuführen. <DocsLink>Mehr erfahren</DocsLink>"
 	},
@@ -63,6 +83,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API-Schlüssel",
 		"openRouterApiKeyPlaceholder": "Gib deinen OpenRouter API-Schlüssel ein",
+		"rooProvider": "Roo Code Cloud",
+		"rooCloudAuthNote": "Roo Code Cloud verwendet deine Kontoauthentifizierung. Melde dich bei Roo Code Cloud an, um diesen Anbieter zu verwenden.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-Schlüssel:",
 		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
@@ -776,7 +798,9 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "KI-Bildgenerierung aktivieren",
-			"description": "Wenn aktiviert, kann Roo Bilder aus Textprompts mit OpenRouters Bildgenerierungsmodellen erstellen. Erfordert einen konfigurierten OpenRouter API-Schlüssel.",
+			"description": "Wenn aktiviert, kann Roo Bilder aus Textprompts mit Bildgenerierungsmodellen erstellen.",
+			"providerLabel": "Anbieter",
+			"providerDescription": "Wähle den Anbieter für die Bildgenerierung.",
 			"openRouterApiKeyLabel": "OpenRouter API-Schlüssel",
 			"openRouterApiKeyPlaceholder": "Gib deinen OpenRouter API-Schlüssel ein",
 			"getApiKeyText": "Hol dir deinen API-Schlüssel von",

@@ -121,8 +121,6 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				}) as const,
 		)
 
-		const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
-
 		let lastUsage: OpenAI.CompletionUsage | undefined
 
 		for await (const chunk of stream) {
@@ -154,23 +152,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				}
 			}
 
+			// Emit raw tool call chunks - NativeToolCallParser handles state management
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					yield {
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
+				}
+			}
+
 			if (chunk.usage) {
 				lastUsage = chunk.usage
 			}
-		}
-
-		// Fallback: If stream ends with accumulated tool calls that weren't yielded
-		// (e.g., finish_reason was 'stop' or 'length' instead of 'tool_calls')
-		if (toolCallAccumulator.size > 0) {
-			for (const toolCall of toolCallAccumulator.values()) {
-				yield {
-					type: "tool_call",
-					id: toolCall.id,
-					name: toolCall.name,
-					arguments: toolCall.arguments,
-				}
-			}
-			toolCallAccumulator.clear()
 		}
 
 		if (lastUsage) {

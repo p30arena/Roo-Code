@@ -35,6 +35,26 @@
 		"language": "Taal",
 		"about": "Over Roo Code"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Bug gevonden?",
+			"link": "Rapporteer op GitHub"
+		},
+		"featureRequest": {
+			"label": "Heb je een idee?",
+			"link": "Deel het met ons"
+		},
+		"securityIssue": {
+			"label": "Kwetsbaarheid ontdekt?",
+			"link": "Volg ons openbaarmakingsproces"
+		},
+		"contact": {
+			"label": "Moet je met ons praten? Schrijf"
+		},
+		"community": "Wil je tips of gewoon even hangen met andere Roo Code-gebruikers? Sluit je aan bij <redditLink>reddit.com/r/RooCode</redditLink> of <discordLink>discord.gg/roocode</discordLink>",
+		"contactAndCommunity": "Contact & Gemeenschap",
+		"manageSettings": "Instellingen Beheren"
+	},
 	"slashCommands": {
 		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
 	},
@@ -58,6 +78,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API-sleutel",
 		"openRouterApiKeyPlaceholder": "Voer uw OpenRouter API-sleutel in",
+		"rooProvider": "Roo Code Cloud",
+		"rooCloudAuthNote": "Roo Code Cloud gebruikt je accountauthenticatie. Meld je aan bij Roo Code Cloud om deze provider te gebruiken.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
@@ -776,6 +798,8 @@
 			"description": "Wanneer ingeschakeld, vereist de new_task-tool dat een todos-parameter wordt opgegeven. Dit zorgt ervoor dat alle nieuwe taken beginnen met een duidelijke lijst met doelstellingen. Wanneer uitgeschakeld (standaard), blijft de todos-parameter optioneel voor achterwaartse compatibiliteit."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "Provider",
+			"providerDescription": "Selecteer de provider voor het genereren van afbeeldingen.",
 			"name": "AI-afbeeldingsgeneratie inschakelen",
 			"description": "Wanneer ingeschakeld, kan Roo afbeeldingen genereren van tekstprompts met behulp van OpenRouter's afbeeldingsgeneratiemodellen. Vereist een geconfigureerde OpenRouter API-sleutel.",
 			"openRouterApiKeyLabel": "OpenRouter API-sleutel",

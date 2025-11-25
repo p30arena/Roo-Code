@@ -35,6 +35,26 @@
 		"language": "Język",
 		"about": "O Roo Code"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Znalazłeś błąd?",
+			"link": "Zgłoś na GitHub"
+		},
+		"featureRequest": {
+			"label": "Masz pomysł?",
+			"link": "Podziel się nim z nami"
+		},
+		"securityIssue": {
+			"label": "Odkryłeś lukę w zabezpieczeniach?",
+			"link": "Postępuj zgodnie z naszym procesem ujawniania"
+		},
+		"contact": {
+			"label": "Musisz z nami porozmawiać? Napisz"
+		},
+		"community": "Chcesz wskazówek lub po prostu porozmawiać z innymi użytkownikami Roo Code? Dołącz do <redditLink>reddit.com/r/RooCode</redditLink> lub <discordLink>discord.gg/roocode</discordLink>",
+		"contactAndCommunity": "Kontakt i Społeczność",
+		"manageSettings": "Zarządzaj Ustawieniami"
+	},
 	"slashCommands": {
 		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
 	},
@@ -61,6 +81,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Klucz API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Wprowadź swój klucz API OpenRouter",
+		"rooProvider": "Roo Code Cloud",
+		"rooCloudAuthNote": "Roo Code Cloud używa uwierzytelnienia twojego konta. Zaloguj się do Roo Code Cloud, aby używać tego dostawcy.",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
 		"openAiKeyLabel": "Klucz API OpenAI",
 		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
@@ -776,6 +798,8 @@
 			"description": "Gdy włączone, narzędzie new_task będzie wymagało podania parametru todos. Zapewnia to, że wszystkie nowe zadania rozpoczynają się od jasnej listy celów. Gdy wyłączone (domyślnie), parametr todos pozostaje opcjonalny dla zachowania kompatybilności wstecznej."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "Dostawca",
+			"providerDescription": "Wybierz dostawcę do generowania obrazów.",
 			"name": "Włącz generowanie obrazów AI",
 			"description": "Gdy włączone, Roo może generować obrazy z promptów tekstowych używając modeli generowania obrazów OpenRouter. Wymaga skonfigurowanego klucza API OpenRouter.",
 			"openRouterApiKeyLabel": "Klucz API OpenRouter",

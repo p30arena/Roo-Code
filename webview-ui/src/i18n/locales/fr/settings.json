@@ -35,6 +35,26 @@
 		"language": "Langue",
 		"about": "À propos de Roo Code"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Vous avez trouvé un bug ?",
+			"link": "Signaler sur GitHub"
+		},
+		"featureRequest": {
+			"label": "Vous avez une idée ?",
+			"link": "Partagez-la avec nous"
+		},
+		"securityIssue": {
+			"label": "Vous avez découvert une vulnérabilité ?",
+			"link": "Suivez notre processus de divulgation"
+		},
+		"contact": {
+			"label": "Besoin de nous parler ? Écrivez"
+		},
+		"community": "Vous voulez des conseils ou simplement discuter avec d'autres utilisateurs de Roo Code ? Rejoignez <redditLink>reddit.com/r/RooCode</redditLink> ou <discordLink>discord.gg/roocode</discordLink>",
+		"contactAndCommunity": "Contact et Communauté",
+		"manageSettings": "Gérer les Paramètres"
+	},
 	"slashCommands": {
 		"description": "Gérez vos commandes slash pour exécuter rapidement des flux de travail et des actions personnalisées. <DocsLink>En savoir plus</DocsLink>"
 	},
@@ -63,6 +83,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clé d'API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Entrez votre clé d'API OpenRouter",
+		"rooProvider": "Roo Code Cloud",
+		"rooCloudAuthNote": "Roo Code Cloud utilise l'authentification de ton compte. Connecte-toi à Roo Code Cloud pour utiliser ce fournisseur.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clé d'API:",
 		"mistralApiKeyPlaceholder": "Entrez votre clé d'API Mistral",
@@ -776,6 +798,8 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Activer la génération d'images IA",
+			"providerLabel": "Fournisseur",
+			"providerDescription": "Sélectionnez le fournisseur pour la génération d'images.",
 			"description": "Lorsqu'activé, Roo peut générer des images à partir de prompts textuels en utilisant les modèles de génération d'images d'OpenRouter. Nécessite qu'une clé API OpenRouter soit configurée.",
 			"openRouterApiKeyLabel": "Clé API OpenRouter",
 			"openRouterApiKeyPlaceholder": "Entrez votre clé API OpenRouter",

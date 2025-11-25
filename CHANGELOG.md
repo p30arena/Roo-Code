@@ -1,5 +1,38 @@
 # Roo Code Changelog
 
+## [3.34.3] - 2025-11-25
+
+![3.34.3 Release - Streaming and Opus 4.5](/releases/3.34.3-release.png)
+
+- Implement streaming for native tool calls, providing real-time feedback during tool execution (PR #9542 by @daniel-lxs)
+- Add Claude Opus 4.5 model to Claude Code provider (PR #9560 by @mrubens)
+- Add Claude Opus 4.5 model to Bedrock provider (#9571 by @pisicode, PR #9572 by @roomote)
+- Enable caching for Opus 4.5 model to improve performance (#9567 by @iainRedro, PR #9568 by @roomote)
+- Add support for Roo Code Cloud as an embeddings provider (PR #9543 by @mrubens)
+- Fix ask_followup_question streaming issue and add missing tool cases (PR #9561 by @daniel-lxs)
+- Add contact links to About Roo Code settings page (PR #9570 by @roomote)
+- Switch from asdf to mise-en-place in bare-metal evals setup script (PR #9548 by @cte)
+
+## [3.34.2] - 2025-11-24
+
+![3.34.2 Release - Opus Conductor](/releases/3.34.2-release.png)
+
+- Add support for Claude Opus 4.5 in Anthropic and Vertex providers (PR #9541 by @daniel-lxs)
+- Add support for Claude Opus 4.5 in OpenRouter with prompt caching and reasoning budget (PR #9540 by @daniel-lxs)
+- Add Roo Code Cloud as an image generation provider (PR #9528 by @mrubens)
+- Fix: Gracefully skip unsupported content blocks in Gemini transformer (PR #9537 by @daniel-lxs)
+- Fix: Flush LiteLLM cache when credentials change on refresh (PR #9536 by @daniel-lxs)
+- Fix: Ensure XML parser state matches tool protocol on config update (PR #9535 by @daniel-lxs)
+- Update Cerebras models (PR #9527 by @sebastiand-cerebras)
+- Fix: Support reasoning_details format for Gemini 3 models (PR #9506 by @daniel-lxs)
+
+## [3.34.1] - 2025-11-23
+
+- Show the prompt for image generation in the UI (PR #9505 by @mrubens)
+- Fix double todo list display issue (PR #9517 by @mrubens)
+- Add tracking for cloud synced messages (PR #9518 by @mrubens)
+- Enable the Roo Code Cloud provider in evals (PR #9492 by @cte)
+
 ## [3.34.0] - 2025-11-21
 
 ![3.34.0 Release - Browser Use 2.0](/releases/3.34.0-release.png)

@@ -1,7 +1,48 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Content, Part } from "@google/genai"
 
-export function convertAnthropicContentToGemini(content: string | Anthropic.ContentBlockParam[]): Part[] {
+type ThoughtSignatureContentBlock = {
+	type: "thoughtSignature"
+	thoughtSignature?: string
+}
+
+type ReasoningContentBlock = {
+	type: "reasoning"
+	text: string
+}
+
+type ExtendedContentBlockParam = Anthropic.ContentBlockParam | ThoughtSignatureContentBlock | ReasoningContentBlock
+type ExtendedAnthropicContent = string | ExtendedContentBlockParam[]
+
+function isThoughtSignatureContentBlock(block: ExtendedContentBlockParam): block is ThoughtSignatureContentBlock {
+	return block.type === "thoughtSignature"
+}
+
+export function convertAnthropicContentToGemini(
+	content: ExtendedAnthropicContent,
+	options?: { includeThoughtSignatures?: boolean; toolIdToName?: Map<string, string> },
+): Part[] {
+	const includeThoughtSignatures = options?.includeThoughtSignatures ?? true
+	const toolIdToName = options?.toolIdToName
+
+	// First pass: find thoughtSignature if it exists in the content blocks
+	let activeThoughtSignature: string | undefined
+	if (Array.isArray(content)) {
+		const sigBlock = content.find((block) => isThoughtSignatureContentBlock(block)) as ThoughtSignatureContentBlock
+		if (sigBlock?.thoughtSignature) {
+			activeThoughtSignature = sigBlock.thoughtSignature
+		}
+	}
+
+	// Determine the signature to attach to function calls.
+	// If we're in a mode that expects signatures (includeThoughtSignatures is true):
+	// 1. Use the actual signature if we found one in the history/content.
+	// 2. Fallback to "skip_thought_signature_validator" if missing (e.g. cross-model history).
+	let functionCallSignature: string | undefined
+	if (includeThoughtSignatures) {
+		functionCallSignature = activeThoughtSignature || "skip_thought_signature_validator"
+	}
+
 	if (typeof content === "string") {
 		return [{ text: content }]
 	}
@@ -64,8 +105,10 @@ export function convertAnthropicContentToGemini(content: string | Anthropic.Cont
 				]
 			}
 			default:
-				// Currently unsupported: "thinking" | "redacted_thinking" | "document"
-				throw new Error(`Unsupported content block type: ${block.type}`)
+				// Skip unsupported content block types (e.g., "reasoning", "thinking", "redacted_thinking", "document")
+				// These are typically metadata from other providers that don't need to be sent to Gemini
+				console.warn(`Skipping unsupported content block type: ${block.type}`)
+				return []
 		}
 	})
 }

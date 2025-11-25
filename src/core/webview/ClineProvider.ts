@@ -1920,6 +1920,7 @@ export class ClineProvider
 			includeCurrentCost,
 			taskSyncEnabled,
 			remoteControlEnabled,
+			imageGenerationProvider,
 			openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
@@ -2086,6 +2087,7 @@ export class ClineProvider
 			includeCurrentCost: includeCurrentCost ?? true,
 			taskSyncEnabled,
 			remoteControlEnabled,
+			imageGenerationProvider,
 			openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
@@ -2315,6 +2317,7 @@ export class ClineProvider
 					return false
 				}
 			})(),
+			imageGenerationProvider: stateValues.imageGenerationProvider,
 			openRouterImageApiKey: stateValues.openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel: stateValues.openRouterImageGenerationSelectedModel,
 			featureRoomoteControlEnabled: (() => {
